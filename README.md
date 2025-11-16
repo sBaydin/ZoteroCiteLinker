@@ -31,9 +31,6 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
     * Go to the **Trusted Locations** tab.
     * In the list, find the location with the description "**User STARTUP**".
     * **Click on it and copy the full path** from the bottom of the window.
-
-    [Buraya Güven Merkezi'ndeki (Trust Center) Başlangıç (STARTUP) klasör yolunu gösteren bir ekran görüntüsü ekleyin]
-
     * The path will look something like this:
         `C:\Users\<YourUserName>\AppData\Roaming\Microsoft\Word\STARTUP`
 
