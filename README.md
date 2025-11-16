@@ -45,6 +45,12 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
     * You **must** click the **"Enable Content"** button. This tells Word to trust the add-in.
     * You should now see a new **"Zotero Linker"** tab on your Word Ribbon.
 
+## ⚠️ Important: Backup Your Work!
+
+Before running any macros that modify your document (like "Link All Citations" or "Set Style"), it is **strongly recommended** that you **save a backup copy** of your work.
+
+While this add-in is designed to be safe, a macro-driven error, an unexpected interaction with other add-ins, or a mistake (like applying a Paragraph Style) could lead to unintended changes. A backup ensures you can always revert to a safe version of your document.
+
 ## 📖 How to Use: The Ribbon Guide
 
 ![ZoteroCiteLinker Ribbon](ss.png)
