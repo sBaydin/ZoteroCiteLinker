@@ -16,6 +16,17 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Pre-flight Check:** Verifies that the Zotero application is running before attempting to link.
 * **Compatibility:** Works with over 15 common Zotero citation styles (listed in the "How to Use" section below).
 
+## 📷 Screen Shots
+![ZoteroCiteLinker Ribbon](images/1.png)
+![ZoteroCiteLinker Ribbon](images/2.png)
+![ZoteroCiteLinker Ribbon](images/3.png)
+![ZoteroCiteLinker Ribbon](images/4.png)
+![ZoteroCiteLinker Ribbon](images/5.png)
+![ZoteroCiteLinker Ribbon](images/6.png)
+![ZoteroCiteLinker Ribbon](images/7.png)
+![ZoteroCiteLinker Ribbon](images/8.png)
+![ZoteroCiteLinker Ribbon](images/9.png)
+
 ## 💾 Installation Instructions
 
 This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP folder. This will automatically load the "Zotero Linker" Ribbon tab every time you open Word.
