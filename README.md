@@ -47,7 +47,7 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
 
 ## 📖 How to Use: The Ribbon Guide
 
-[Buraya Zotero Linker Şeridindeki (Ribbon) tüm düğmeleri gösteren bir resim ekleyin]
+![ZoteroCiteLinker Ribbon](ss.png)
 
 Here is a breakdown of each button on the "Zotero Linker" tab.
 
