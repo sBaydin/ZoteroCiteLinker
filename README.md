@@ -21,7 +21,8 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP folder. This will automatically load the "Zotero Linker" Ribbon tab every time you open Word.
 
 1.  **Get the File:**
-    * Download the latest `ZoteroCiteLinker.dotm` file from the [Releases page](httpsTo-your-releases-page) on this GitHub repository.
+    * **[Click here to download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/raw/main/ZoteroCiteLinker.dotm)**
+    *(You may need to right-click the link and select "Save As...")*
 
 2.  **Find your Word STARTUP Folder:**
     * Open MS Word.
