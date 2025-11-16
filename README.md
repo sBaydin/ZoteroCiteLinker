@@ -89,27 +89,27 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
 * **Info (`ZCL_Information`)**
-    * Displays a pop-up box listing all 17 citation styles supported by the add-in's engine:
+    * Displays a pop-up box listing all 17 citation styles supported by the add-in's engine, grouped by type:
 
-| Proper Name | Zotero Style ID |
-|---|---|
-| American Chemical Society (ACS) | `american-chemical-society` |
-| American Medical Association (AMA) | `american-medical-association` |
-| American Political Science Ass. | `american-political-science-association` |
-| American Psychological Ass. (APA) | `apa` |
-| American Sociological Ass. (ASA) | `american-sociological-association` |
-| Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
-| BMC Medicine | `bmc-medicine` |
-| Chicago Manual of Style (Author-Date) | `chicago-author-date` |
-| China National Standard (Author-Date) | `china-national-standard-gb-t-7714-2015-author-date` |
-| China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
-| Elsevier - Harvard | `elsevier-harvard` |
-| Harvard (Cite Them Right) | `harvard-cite-them-right` |
-| IEEE | `ieee` |
-| Modern Language Association (MLA) | `modern-language-association` |
-| Molecular Plant | `molecular-plant` |
-| Nature | `nature` |
-| Vancouver | `vancouver` |
+| Style Type | Proper Name | Zotero Style ID |
+| :--- | :--- | :--- |
+| **Author-Year** | American Political Science Ass. | `american-political-science-association` |
+| **Author-Year** | American Psychological Ass. (APA) | `apa` |
+| **Author-Year** | American Sociological Ass. (ASA) | `american-sociological-association` |
+| **Author-Year** | Chicago Manual of Style (Author-Date) | `chicago-author-date` |
+| **Author-Year** | China National Standard (Author-Date) | `china-national-standard-gb-t-7714-2015-author-date` |
+| **Author-Year** | Cite Them Right - Harvard | `harvard-cite-them-right` |
+| **Author-Year** | Elsevier - Harvard | `elsevier-harvard` |
+| **Author-Year** | Molecular Plant | `molecular-plant` |
+| **Author-only** | Modern Language Association (MLA) | `modern-language-association` |
+| **Numeric** | American Chemical Society (ACS) | `american-chemical-society` |
+| **Numeric** | American Medical Association (AMA) | `american-medical-association` |
+| **Numeric** | Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
+| **Numeric** | BMC Medicine | `bmc-medicine` |
+| **Numeric** | China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
+| **Numeric** | IEEE | `ieee` |
+| **Numeric** | Nature | `nature` |
+| **Numeric** | Vancouver | `vancouver` |
 
 ## 🤝 Acknowledgments
 
