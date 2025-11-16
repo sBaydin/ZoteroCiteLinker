@@ -29,7 +29,7 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
     * Go to **File** -> **Options** -> **Trust Center**.
     * Click the **Trust Center Settings...** button.
     * Go to the **Trusted Locations** tab.
-    * In the list, find the location with the description "**User STARTUP**" (veya Türkçe Word'de "**Kullanıcı Başlangıç**").
+    * In the list, find the location with the description "**User STARTUP**".
     * **Click on it and copy the full path** from the bottom of the window.
 
     [Buraya Güven Merkezi'ndeki (Trust Center) Başlangıç (STARTUP) klasör yolunu gösteren bir ekran görüntüsü ekleyin]
