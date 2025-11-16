@@ -4,7 +4,7 @@ An MS Word Add-in that creates an interactive bridge between your in-text Zotero
 
 This add-in scans your document for Zotero-generated citation fields (e.g., `[1]`, `(Author, 2020)`) and intelligently links them to the corresponding entries in your bibliography, allowing for instant navigation.
 
-[ss.png]
+![ZoteroCiteLinker Ribbon](ss.png)
 
 ## 🌟 Features
 
