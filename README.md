@@ -79,7 +79,7 @@ While this add-in is designed to be safe, a macro-driven error, an unexpected in
 
 ## 📖 How to Use: The Ribbon Guide
 
-![ZoteroCiteLinker Ribbon](ss.png)
+![ZoteroCiteLinker Ribbon](images/ss.png)
 
 Here is a breakdown of each button on the "Zotero Linker" tab.
 
