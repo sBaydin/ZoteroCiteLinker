@@ -11,14 +11,10 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **One-Click Linking:** Automatically link all citations in the document.
 * **Step-by-Step Linking:** A manual "debug" mode to process citations one by one.
 * **Smart Unlinking:** Safely remove *only* the links created by this add-in, without touching your Table of Contents or other hyperlinks.
-* **Utility Functions:**
-    * Activate all web URLs (`http://`) and email addresses (`mailto:`) in your document into clickable links.
-    * Separately remove all web/email links, leaving your citation links untouched.
-* **Customization:**
-    * Change the color of all Zotero citations (e.g., Blue, Red, Auto/Black).
-    * Apply a custom Word "Character Style" to your citations for advanced formatting.
+* **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
+* **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
 * **Pre-flight Check:** Verifies that the Zotero application is running before attempting to link.
-* **Compatibility:** Works with over 15 common Zotero citation styles (APA, IEEE, Vancouver, etc.).
+* **Compatibility:** Works with over 15 common Zotero citation styles (listed in the "How to Use" section below).
 
 ## 💾 Installation Instructions
 
@@ -92,7 +88,27 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
 * **Info (`ZCL_Information`)**
-    * Displays a pop-up box listing all the Zotero citation styles that this add-in officially supports.
+    * Displays a pop-up box listing all 17 citation styles supported by the add-in's engine:
+
+| Proper Name | Zotero Style ID |
+|---|---|
+| American Chemical Society (ACS) | `american-chemical-society` |
+| American Medical Association (AMA) | `american-medical-association` |
+| American Political Science Ass. | `american-political-science-association` |
+| American Psychological Ass. (APA) | `apa` |
+| American Sociological Ass. (ASA) | `american-sociological-association` |
+| Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
+| BMC Medicine | `bmc-medicine` |
+| Chicago Manual of Style (Author-Date) | `chicago-author-date` |
+| China National Standard (Author-Date) | `china-national-standard-gb-t-7714-2015-author-date` |
+| China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
+| Elsevier - Harvard | `elsevier-harvard` |
+| Harvard (Cite Them Right) | `harvard-cite-them-right` |
+| IEEE | `ieee` |
+| Modern Language Association (MLA) | `modern-language-association` |
+| Molecular Plant | `molecular-plant` |
+| Nature | `nature` |
+| Vancouver | `vancouver` |
 
 ## 🤝 Acknowledgments
 
