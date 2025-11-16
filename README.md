@@ -16,6 +16,42 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Pre-flight Check:** Verifies that the Zotero application is running before attempting to link.
 * **Compatibility:** Works with over 15 common Zotero citation styles (listed in the "How to Use" section below).
 
+## 🖼️ Screenshots
+
+<details>
+<summary>Click to see the add-in in action</summary>
+<br>
+
+<table>
+  <tr>
+    <td align="center"><strong>The "Zotero Linker" Ribbon Tab</strong></td>
+    <td align="center"><strong>Example of Linked Citations</strong></td>
+  </tr>
+  <tr>
+    <td>
+      <img src="ss.png" alt="Zotero Linker Ribbon" width="450" />
+    </td>
+    <td>
+      <img src="linked-text-example.png" alt="Example of linked citations" width="450" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Smart Warnings (e.g., Character Style)</strong></td>
+    <td align="center"><strong>The Final Result (Bookmarks)</strong></td>
+  </tr>
+  <tr>
+    <td>
+      <img src="warning-popup.png" alt="Character style warning" width="450" />
+    </td>
+    <td>
+      <img src="bookmark-result.png" alt="List of created bookmarks in Word" width="450" />
+    </td>
+  </tr>
+</table>
+
+</details>
+
+
 ## 📷 Screen Shots
 ![ZoteroCiteLinker Ribbon](images/1.png)
 ![ZoteroCiteLinker Ribbon](images/2.png)
