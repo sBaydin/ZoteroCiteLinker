@@ -19,49 +19,28 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 ## 🖼️ Screenshots
 
 <details>
-<summary>Click to see the add-in in action</summary>
+<summary>Click to see the add-in in action (9 images)</summary>
 <br>
 
 <table>
   <tr>
-    <td align="center"><strong>The "Zotero Linker" Ribbon Tab</strong></td>
-    <td align="center"><strong>Example of Linked Citations</strong></td>
+    <td align="center"><img src="images/1.png" alt="Screenshot 1" width="280" /></td>
+    <td align="center"><img src="images/2.png" alt="Screenshot 2" width="280" /></td>
+    <td align="center"><img src="images/3.png" alt="Screenshot 3" width="280" /></td>
   </tr>
   <tr>
-    <td>
-      <img src="ss.png" alt="Zotero Linker Ribbon" width="450" />
-    </td>
-    <td>
-      <img src="linked-text-example.png" alt="Example of linked citations" width="450" />
-    </td>
+    <td align="center"><img src="images/4.png" alt="Screenshot 4" width="280" /></td>
+    <td align="center"><img src="images/5.png" alt="Screenshot 5" width="280" /></td>
+    <td align="center"><img src="images/6.png" alt="Screenshot 6" width="280" /></td>
   </tr>
   <tr>
-    <td align="center"><strong>Smart Warnings (e.g., Character Style)</strong></td>
-    <td align="center"><strong>The Final Result (Bookmarks)</strong></td>
-  </tr>
-  <tr>
-    <td>
-      <img src="warning-popup.png" alt="Character style warning" width="450" />
-    </td>
-    <td>
-      <img src="bookmark-result.png" alt="List of created bookmarks in Word" width="450" />
-    </td>
+    <td align="center"><img src="images/7.png" alt="Screenshot 7" width="280" /></td>
+    <td align="center"><img src="images/8.png" alt="Screenshot 8" width="280" /></td>
+    <td align="center"><img src="images/9.png" alt="Screenshot 9" width="280" /></td>
   </tr>
 </table>
 
 </details>
-
-
-## 📷 Screen Shots
-![ZoteroCiteLinker Ribbon](images/1.png)
-![ZoteroCiteLinker Ribbon](images/2.png)
-![ZoteroCiteLinker Ribbon](images/3.png)
-![ZoteroCiteLinker Ribbon](images/4.png)
-![ZoteroCiteLinker Ribbon](images/5.png)
-![ZoteroCiteLinker Ribbon](images/6.png)
-![ZoteroCiteLinker Ribbon](images/7.png)
-![ZoteroCiteLinker Ribbon](images/8.png)
-![ZoteroCiteLinker Ribbon](images/9.png)
 
 ## 💾 Installation Instructions
 
