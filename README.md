@@ -14,7 +14,6 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Structured Bookmarks:** Generates clean, human-readable bookmarks (e.g., `Cite_id1234_Title_2020_Author`) for easy navigation and management in Word's bookmark dialog.
 * **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
-* **Pre-flight Check:** Verifies that the Zotero application is running before attempting to link.
 * **Compatibility:** Works with over 15 common Zotero citation styles (listed in the "How to Use" section below).
 
 ## 🖼️ Screenshots
