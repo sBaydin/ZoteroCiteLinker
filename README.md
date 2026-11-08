@@ -14,7 +14,7 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Structured Bookmarks:** Generates clean, human-readable bookmarks (e.g., `Cite_id1234_Title_2020_Author`) for easy navigation and management in Word's bookmark dialog.
 * **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
-* **Compatibility:** Works with over 15 common Zotero citation styles (listed in the "How to Use" section below).
+* **Compatibility:** Works with over 19 common Zotero citation styles (listed in the "How to Use" section below).
 
 ## 🖼️ Screenshots
 
@@ -71,6 +71,16 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
     * You **must** click the **"Enable Content"** button. This tells Word to trust the add-in.
     * You should now see a new **"Zotero Linker"** tab on your Word Ribbon.
 
+### macOS (beta)
+
+macOS Word does not provide `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in now has a Mac-specific code path. The `.dotm` download is still the Windows build; to try the macOS beta, import the source files into Word:
+
+1. Open Word and press `Option + F11` to open the VBA editor.
+2. Import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls` (**File > Import File...**).
+3. Save the document as a macro-enabled template (`.dotm`) and place it in Word's STARTUP folder.
+
+macOS support is experimental; please report results in the issue tracker.
+
 ## ⚠️ Important: Backup Your Work!
 
 Before running any macros that modify your document (like "Link All Citations" or "Set Style"), it is **strongly recommended** that you **save a backup copy** of your work.
@@ -118,7 +128,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
 * **Info (`ZCL_Information`)**
-    * Displays a pop-up box listing all 17 citation styles supported by the add-in's engine, grouped by type:
+    * Displays a pop-up box listing all 19 citation styles supported by the add-in's engine, grouped by type:
 
 | Style Type | Proper Name | Zotero Style ID |
 | :--- | :--- | :--- |
@@ -132,6 +142,8 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 | **Author-Year** | Molecular Plant | `molecular-plant` |
 | **Author-only** | Modern Language Association (MLA) | `modern-language-association` |
 | **Numeric** | American Chemical Society (ACS) | `american-chemical-society` |
+| **Numeric** | American Physical Society (APS) | `american-physics-society` |
+| **Numeric** | Physical Review Letters (PRL) | `physical-review-letters` |
 | **Numeric** | American Medical Association (AMA) | `american-medical-association` |
 | **Numeric** | Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
 | **Numeric** | BMC Medicine | `bmc-medicine` |
