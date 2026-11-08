@@ -159,6 +159,8 @@ This add-in was built by modifying the excellent foundational code from:
 * [altairwei/ZoteroLinkCitation](https://github.com/altairwei/ZoteroLinkCitation)
 * [8gengen8/ZoteroCitationLink-lgg](https://github.com/8gengen8/ZoteroCitationLink-lgg)
 
+The Elsevier - NLM/Vancouver style was requested by [@Nikita0087](https://github.com/Nikita0087) in [#4](https://github.com/sBaydin/ZoteroCiteLinker/pull/4).
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
