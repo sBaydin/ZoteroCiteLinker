@@ -14,7 +14,7 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Structured Bookmarks:** Generates clean, human-readable bookmarks (e.g., `Cite_id1234_Title_2020_Author`) for easy navigation and management in Word's bookmark dialog.
 * **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
-* **Compatibility:** Works with over 19 common Zotero citation styles (listed in the "How to Use" section below).
+* **Compatibility:** Works with over 20 common Zotero citation styles (listed in the "How to Use" section below).
 
 ## 🖼️ Screenshots
 
@@ -128,7 +128,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
 * **Info (`ZCL_Information`)**
-    * Displays a pop-up box listing all 19 citation styles supported by the add-in's engine, grouped by type:
+    * Displays a pop-up box listing all 20 citation styles supported by the add-in's engine, grouped by type:
 
 | Style Type | Proper Name | Zotero Style ID |
 | :--- | :--- | :--- |
@@ -148,6 +148,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 | **Numeric** | Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
 | **Numeric** | BMC Medicine | `bmc-medicine` |
 | **Numeric** | China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
+| **Numeric** | Elsevier - NLM/Vancouver | `elsevier-vancouver` |
 | **Numeric** | IEEE | `ieee` |
 | **Numeric** | Nature | `nature` |
 | **Numeric** | Vancouver | `vancouver` |
