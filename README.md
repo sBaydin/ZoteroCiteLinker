@@ -75,7 +75,7 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
 
 macOS Word does not provide `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in has a Mac-specific code path. The current `.dotm` includes that path and the `CustomDictionary` class, so macOS users install the same `.dotm` as on Windows.
 
-The source in `src/` is only needed to inspect or rebuild the add-in: import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls` with **File > Import File...** (`Option + F11` opens the VBA editor), then save as a macro-enabled template.
+The source in `src/` is only needed to inspect or rebuild the add-in: import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls`(be careful, it must be a Class Module) with **File > Import File...** (`Option + F11` opens the VBA editor), then save as a macro-enabled template.
 
 macOS support is experimental; please report results in the issue tracker.
 
