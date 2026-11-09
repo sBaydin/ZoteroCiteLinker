@@ -56,13 +56,6 @@ End Function
 ' Source: https://medium.com/swlh/excel-vba-parse-json-easily-c2213f4d8e7a
 '-------------------------------------------------------------------
 
-' Adds a key once, like Scripting.Dictionary.Add without raising on duplicates.
-Private Sub DictSet(ByVal dictObj As Object, ByVal key As Variant, ByVal value As Variant)
-    If Not dictObj.Exists(key) Then
-        dictObj.Add key, value
-    End If
-End Sub
-
 ' Main entry point for the JSON parser.
 ' Initializes the parser state and starts parsing.
 Private Function ParseJSON(json$, Optional key$ = "obj") As Object
@@ -82,7 +75,7 @@ Private Function ParseObj(key$)
             Case "{"
                     If token(p + 1) = "}" Then
                         p = p + 1
-                        DictSet dic, key, "null"
+                        dic.Add key, "null"
                     Else
                         ParseObj key
                     End If
@@ -90,7 +83,7 @@ Private Function ParseObj(key$)
             Case "}":   key = ReducePath(key): Exit Do
             Case ":":   key = key & "." & token(p - 1)
             Case ",":   key = ReducePath(key)
-            Case Else: If token(p + 1) <> ":" Then DictSet dic, key, token(p)
+            Case Else: If token(p + 1) <> ":" Then dic.Add key, token(p)
         End Select
     Loop
 End Function
@@ -106,7 +99,7 @@ Private Function ParseArr(key$)
             Case "]":   Exit Do
             Case ":":   key = key & ArrayID(e)
             Case ",":   e = e + 1
-            Case Else: DictSet dic, key & ArrayID(e), token(p)
+            Case Else: dic.Add key & ArrayID(e), token(p)
         End Select
     Loop
 End Function
