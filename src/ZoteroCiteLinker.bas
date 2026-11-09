@@ -33,7 +33,7 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.1.0-mac-beta"
+Public Const ZCL_VERSION As String = "2.1.1-mac-beta"
 
 Private p&, token, dic
 
@@ -341,6 +341,14 @@ Private Function CleanForBookmarkName(ByVal s As String) As String
         CleanForBookmarkName = "_" & CleanForBookmarkName
     End If
 End Function
+
+' Scrolls the active window to a range on Windows. Word for Mac lacks
+' ScrollIntoView, so the caller's following Select is enough there.
+Private Sub ScrollToRange(ByVal target As Range)
+    #If Mac = False Then
+        ActiveWindow.ScrollIntoView target, True
+    #End If
+End Sub
 
 ' Sorts a 1D variant array in place using the QuickSort algorithm.
 Private Sub QuickSort(arr As Variant, inLow As Long, inHigh As Long)
@@ -1045,7 +1053,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
     iCount = 0
     
     ' Do not support Bookmark-type citations
-    If Not prefs("pref-fieldType") = "Field" Then
+    If Not prefs.Item("pref-fieldType") = "Field" Then
         MsgBox "Only support 'Fields' type citations" & vbCrLf & vbCrLf & _
             "Click on Document Preferences in Word, then expand the Advanced Options section. " & _
             "This will allow you to verify whether the 'Store citation as bookmarks' option was accidentally enabled.", _
@@ -1053,7 +1061,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
         Exit Sub
     End If
 
-    styleId = prefs("style-id")
+    styleId = prefs.Item("style-id")
     If Not isSupportedStyle(styleId) Then
         MsgBox "The current citation style is not yet supported: " & styleId, vbCritical, "Error"
         Exit Sub
@@ -1108,7 +1116,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                 If debugging Then
                     ' Focus to next field
                     Application.ScreenUpdating = True
-                    ActiveWindow.ScrollIntoView aField.result, True
+                    ScrollToRange aField.result
                     aField.result.Select
             
                     ' Update the document
@@ -1315,7 +1323,7 @@ Public Sub ZCL_LinkCitationSelect(control As IRibbonControl)
     Call ZoteroLinkCitation(ActiveDocument.Fields, debugging, True)
 
     ' 3. Restore the original selection
-    ActiveWindow.ScrollIntoView originalRng, True
+    ScrollToRange originalRng
     originalRng.Select
 
     ' Re-enable screen updating
@@ -1347,7 +1355,7 @@ Public Sub ZCL_LinkCitationAll(control As IRibbonControl)
     Call ZoteroLinkCitation(ActiveDocument.Fields, debugging, True)
 
     ' 3. Restore the original selection
-    ActiveWindow.ScrollIntoView originalRng, True
+    ScrollToRange originalRng
     originalRng.Select
 
     ' Re-enable screen updating
