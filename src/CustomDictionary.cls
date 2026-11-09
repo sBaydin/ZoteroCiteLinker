@@ -53,7 +53,6 @@ Public Sub Add(ByVal key As Variant, ByVal value As Variant)
 End Sub
 
 Public Property Get Item(ByVal key As Variant) As Variant
-Attribute Item.VB_UserMemId = 0
     Dim idx As Long
     idx = FindKey(key)
     If idx > 0 Then
