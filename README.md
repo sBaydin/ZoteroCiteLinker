@@ -15,6 +15,7 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
 * **Compatibility:** Works with over 20 common Zotero citation styles (listed in the "How to Use" section below).
+* **Cross-Platform:** One `.dotm` runs on Word for Windows and Word for macOS.
 
 ## 🖼️ Screenshots
 
@@ -46,6 +47,8 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 
 This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP folder. This will automatically load the "Zotero Linker" Ribbon tab every time you open Word.
 
+### Windows
+
 1.  **Get the File:**
     * **[Click here to download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/raw/main/ZoteroCiteLinker.dotm)**
     *(You may need to right-click the link and select "Save As...")*
@@ -71,13 +74,21 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
     * You **must** click the **"Enable Content"** button. This tells Word to trust the add-in.
     * You should now see a new **"Zotero Linker"** tab on your Word Ribbon.
 
-### macOS (beta)
+### macOS
 
-macOS Word does not provide `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in has a Mac-specific code path. The current `.dotm` includes that path and the `CustomDictionary` class, so macOS users install the same `.dotm` as on Windows.
+The same `.dotm` runs on Word for macOS; there is no separate Mac build.
 
-The source in `src/` is only needed to inspect or rebuild the add-in: import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls`(be careful, it must be a Class Module) with **File > Import File...** (`Option + F11` opens the VBA editor), then save as a macro-enabled template.
+1.  **Get the File:** use the same download link above.
+2.  **Open Word's STARTUP folder:** in Finder, choose **Go > Go to Folder...** (`Shift + Command + G`) and enter:
+    `~/Library/Group Containers/UBF8T346G9.Office/User Content/Startup/Word`
+3.  **Copy the Add-in File:** move `ZoteroCiteLinker.dotm` into that folder.
+4.  **Restart Word & Enable Macros:** close and reopen Word, then click **Enable Macros** when prompted. The **Zotero Linker** tab should appear.
 
-macOS support is experimental; please report results in the issue tracker.
+macOS Word does not provide `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in has a Mac-specific code path (included in the shipped `.dotm`).
+
+The source in `src/` is only needed to inspect or rebuild the add-in: import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls` (it must be a Class Module) with **File > Import File...** (`Option + F11` opens the VBA editor), then save as a macro-enabled template.
+
+If you hit a macOS-specific problem, please report it in the issue tracker.
 
 ## ⚠️ Important: Backup Your Work!
 

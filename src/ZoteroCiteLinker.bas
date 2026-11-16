@@ -33,7 +33,7 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.1.2-mac-beta"
+Public Const ZCL_VERSION As String = "2.2.0"
 
 Private p&, token, dic
 
