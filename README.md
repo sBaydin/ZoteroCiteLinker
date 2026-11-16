@@ -50,8 +50,9 @@ This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP
 ### Windows
 
 1.  **Get the File:**
-    * **[Click here to download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/raw/main/ZoteroCiteLinker.dotm)**
+    * **[Click here to download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/releases/latest/download/ZoteroCiteLinker.dotm)**
     *(You may need to right-click the link and select "Save As...")*
+    * To download an older version, browse [all releases](https://github.com/sBaydin/ZoteroCiteLinker/releases).
 
 2.  **Find your Word STARTUP Folder:**
     * Open MS Word.
