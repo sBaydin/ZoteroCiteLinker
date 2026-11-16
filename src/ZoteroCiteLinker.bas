@@ -33,7 +33,7 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.1.1-mac-beta"
+Public Const ZCL_VERSION As String = "2.1.2-mac-beta"
 
 Private p&, token, dic
 
@@ -955,7 +955,7 @@ Private Function isSupportedStyle(ByVal style As String) As Boolean
         "china-national-standard-gb-t-7714-2015-author-date|" & _
         "harvard-cite-them-right|elsevier-harvard|modern-language-association|" & _
         "archives-of-computational-methods-in-engineering|" & _
-        "elsevier-vancouver|"
+        "elsevier-vancouver|sage-vancouver-brackets|"
     style = "|" & style & "|"
     isSupportedStyle = InStr(1, predefinedList, style, vbTextCompare) > 0
 End Function
@@ -977,7 +977,7 @@ Private Sub ExtractCitations(field As field, ByRef citations() As Citation, styl
         Case "vancouver"
             Call ExtractSerialNumberCitations(field, citations, "()")
         
-        Case "physical-review-letters", "american-physics-society", "china-national-standard-gb-t-7714-2015-numeric", "bmc-medicine", "ieee", "archives-of-computational-methods-in-engineering", "elsevier-vancouver"
+        Case "physical-review-letters", "american-physics-society", "china-national-standard-gb-t-7714-2015-numeric", "bmc-medicine", "ieee", "archives-of-computational-methods-in-engineering", "elsevier-vancouver", "sage-vancouver-brackets"
             Call ExtractSerialNumberCitations(field, citations, "[]")
 
         Case "american-chemical-society", "american-medical-association", "nature"
@@ -1000,7 +1000,7 @@ Public Sub ZCL_Information(control As IRibbonControl)
                    "american-political-science-association|american-sociological-association|chicago-author-date|bmc-medicine|" & _
                    "china-national-standard-gb-t-7714-2015-numeric|china-national-standard-gb-t-7714-2015-author-date|" & _
                    "harvard-cite-them-right|elsevier-harvard|modern-language-association|" & _
-                   "archives-of-computational-methods-in-engineering|elsevier-vancouver", "|")
+                   "archives-of-computational-methods-in-engineering|elsevier-vancouver|sage-vancouver-brackets", "|")
     
     msg = "ZoteroCiteLinker " & ZCL_VERSION & vbCrLf & vbCrLf & "Zotero styles supported by this macro:" & vbCrLf & vbCrLf
     

@@ -126,7 +126,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
 * **Info (`ZCL_Information`)**
-    * Displays a pop-up box listing all 20 citation styles supported by the add-in's engine, grouped by type:
+    * Displays a pop-up box listing all 21 citation styles supported by the add-in's engine, grouped by type:
 
 | Style Type | Proper Name | Zotero Style ID |
 | :--- | :--- | :--- |
@@ -147,6 +147,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 | **Numeric** | BMC Medicine | `bmc-medicine` |
 | **Numeric** | China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
 | **Numeric** | Elsevier - NLM/Vancouver | `elsevier-vancouver` |
+| **Numeric** | SAGE - NLM/Vancouver (brackets) | `sage-vancouver-brackets` |
 | **Numeric** | IEEE | `ieee` |
 | **Numeric** | Nature | `nature` |
 | **Numeric** | Vancouver | `vancouver` |
