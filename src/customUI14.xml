@@ -1,0 +1,69 @@
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="onRibbonLoad">
+  <ribbon>
+    <tabs>
+      <tab id="ZoteroLinkerTab" label="Zotero Linker" insertAfterMso="HelpTab">
+        
+        <group id="gLink" label="Linking Tools">
+          <button id="bLinkAll" 
+                  label="Link All (Automatic)" 
+                  size="large" 
+                  onAction="ZCL_LinkCitationAll" 
+                  imageMso="HyperlinkInsert" /> 
+          <button id="bLinkSel" 
+                  label="Link All (Step-by-Step)" 
+                  size="large" 
+                  onAction="ZCL_LinkCitationSelect" 
+                  imageMso="FindNext" /> 
+           <button id="bUnlinkAll" 
+                  label="Unlink All Citations" 
+                  size="large" 
+                  onAction="ZCL_UnlinkCitations" 
+                  imageMso="HyperlinkRemove" /> 
+        </group>
+        
+        <group id="gUnlink" label="Unlinking Tools">
+          <button id="bLinkBib" 
+                  label="Link Bibliography URLs" 
+                  size="large" 
+                  onAction="ZCL_LinkBibliographyURLs" 
+                  imageMso="WebPagePreview" /> 
+          <button id="bLinkMail" 
+                  label="Link Emails" 
+                  size="large" 
+                  onAction="ZCL_LinkEmails" 
+                  imageMso="MailMergeMergeToEMail" />        
+          <button id="bUnlinkMail" 
+                  label="Unlink URLs/Emails" 
+                  size="large" 
+                  onAction="ZCL_UnlinkURLsMail" 
+                  imageMso="ClearFormatting" /> 
+        </group>
+
+        <group id="gUtils" label="Utilities">
+          
+          <button id="bColor" 
+                  label="Change Color Citations" 
+                  size="large" 
+                  onAction="ZCL_ChangeColor" 
+                  imageMso="ObjectShadowColorMoreColorsDialog" /> 
+          <button id="bStyle" 
+                  label="Change Style Citations" 
+                  size="large" 
+                  onAction="ZCL_SetCitationStyle" 
+                  imageMso="StylesModifyStyle" />        
+          <button id="bStyles" 
+                  label="Supported Styles" 
+                  size="large" 
+                  onAction="ZCL_SupportedStyles" 
+                  imageMso="StylesPane" /> 
+          <button id="bInfo" 
+                  label="About" 
+                  size="large" 
+                  onAction="ZCL_About" 
+                  imageMso="Info" /> 
+        </group>
+        
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

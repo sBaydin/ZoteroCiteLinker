@@ -137,7 +137,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 * **Set Style (`ZCL_SetCitationStyle`)**
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
 
-* **Info (`ZCL_Information`)**
+* **Supported Styles (`ZCL_SupportedStyles`)**
     * Displays a pop-up box listing all 21 citation styles supported by the add-in's engine, grouped by type:
 
 | Style Type | Proper Name | Zotero Style ID |
@@ -163,6 +163,11 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 | **Numeric** | IEEE | `ieee` |
 | **Numeric** | Nature | `nature` |
 | **Numeric** | Vancouver | `vancouver` |
+
+* **About (`ZCL_About`)**
+    * Shows the add-in version, the author, the GitHub address and the license.
+    * Choose **Yes** in the follow-up prompt to open the GitHub repository in your browser.
+    * The older `ZCL_Information` callback is kept as an alias, so templates built with an earlier Ribbon still open the About dialog.
 
 ## 🤝 Acknowledgments
 

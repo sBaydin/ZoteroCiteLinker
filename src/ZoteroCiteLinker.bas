@@ -33,7 +33,7 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.2.0"
+Public Const ZCL_VERSION As String = "2.3.0"
 
 Private p&, token, dic
 
@@ -943,21 +943,51 @@ End Sub
 ' SUPPORTED CITATION STYLES
 '-------------------------------------------------------------------
 
-' Checks if the given Zotero style ID is in the hardcoded supported list.
+' Returns the supported Zotero styles as (ID, display name, group) arrays.
+Private Function ZCL_Styles() As Collection
+    Dim styles As New Collection
+    
+    ' Author-year styles
+    styles.Add Array("apa", "APA", "AUTHOR-YEAR")
+    styles.Add Array("american-political-science-association", "APSA", "AUTHOR-YEAR")
+    styles.Add Array("american-sociological-association", "ASA", "AUTHOR-YEAR")
+    styles.Add Array("chicago-author-date", "Chicago (Author-Date)", "AUTHOR-YEAR")
+    styles.Add Array("harvard-cite-them-right", "Cite Them Right Harvard", "AUTHOR-YEAR")
+    styles.Add Array("elsevier-harvard", "Elsevier Harvard", "AUTHOR-YEAR")
+    styles.Add Array("molecular-plant", "Molecular Plant", "AUTHOR-YEAR")
+    styles.Add Array("china-national-standard-gb-t-7714-2015-author-date", "China NS (Author-Date)", "AUTHOR-YEAR")
+    
+    ' Author-only styles
+    styles.Add Array("modern-language-association", "MLA", "AUTHOR-ONLY")
+    
+    ' Numeric styles
+    styles.Add Array("ieee", "IEEE", "NUMERIC")
+    styles.Add Array("vancouver", "Vancouver", "NUMERIC")
+    styles.Add Array("physical-review-letters", "Physical Review Letters", "NUMERIC")
+    styles.Add Array("american-physics-society", "APS", "NUMERIC")
+    styles.Add Array("american-chemical-society", "ACS", "NUMERIC")
+    styles.Add Array("american-medical-association", "AMA", "NUMERIC")
+    styles.Add Array("nature", "Nature", "NUMERIC")
+    styles.Add Array("bmc-medicine", "BMC Medicine", "NUMERIC")
+    styles.Add Array("china-national-standard-gb-t-7714-2015-numeric", "China NS (Numeric)", "NUMERIC")
+    styles.Add Array("archives-of-computational-methods-in-engineering", "Archives of Comp. Methods", "NUMERIC")
+    styles.Add Array("elsevier-vancouver", "Elsevier NLM/Vancouver", "NUMERIC")
+    styles.Add Array("sage-vancouver-brackets", "SAGE NLM/Vancouver (brackets)", "NUMERIC")
+    
+    Set ZCL_Styles = styles
+End Function
+
+' Checks if the given Zotero style ID is in the supported list.
 Private Function isSupportedStyle(ByVal style As String) As Boolean
-    Dim predefinedList As String
-    predefinedList = "|" & _
-        "physical-review-letters|american-physics-society|" & _
-        "molecular-plant|ieee|apa|vancouver|american-chemical-society|" & _
-        "american-medical-association|nature|american-political-science-association|" & _
-        "american-sociological-association|chicago-author-date|bmc-medicine|" & _
-        "china-national-standard-gb-t-7714-2015-numeric|" & _
-        "china-national-standard-gb-t-7714-2015-author-date|" & _
-        "harvard-cite-them-right|elsevier-harvard|modern-language-association|" & _
-        "archives-of-computational-methods-in-engineering|" & _
-        "elsevier-vancouver|sage-vancouver-brackets|"
-    style = "|" & style & "|"
-    isSupportedStyle = InStr(1, predefinedList, style, vbTextCompare) > 0
+    Dim styles As Collection
+    Dim item As Variant
+    Set styles = ZCL_Styles()
+    For Each item In styles
+        If StrComp(item(0), style, vbTextCompare) = 0 Then
+            isSupportedStyle = True
+            Exit Function
+        End If
+    Next item
 End Function
 
 ' Routes the citation field to the correct parsing function based on the style ID.
@@ -988,27 +1018,57 @@ Private Sub ExtractCitations(field As field, ByRef citations() As Citation, styl
     End Select
 End Sub
 
-' Displays a MsgBox listing all hardcoded supported citation styles.
-Public Sub ZCL_Information(control As IRibbonControl)
-    '--- Variable Declarations ---
-    Dim styles As Variant
+' Displays the About dialog, with an optional shortcut to the GitHub page.
+Public Sub ZCL_About(control As IRibbonControl)
     Dim msg As String
+    
+    msg = "ZoteroCiteLinker " & ZCL_VERSION & vbCrLf & vbCrLf & _
+          "An MS Word add-in that links Zotero citations" & vbCrLf & _
+          "to their matching bibliography entries." & vbCrLf & vbCrLf & _
+          "Windows and macOS supported." & vbCrLf & vbCrLf & _
+          "Author:  Serdar Berat AYDIN" & vbCrLf & _
+          "GitHub:  https://github.com/sBaydin/ZoteroCiteLinker" & vbCrLf & _
+          "License: MIT"
+    
+    MsgBox msg, vbInformation, "About ZoteroCiteLinker"
+    
+    If MsgBox("Open the GitHub repository in your browser?", _
+              vbYesNo + vbQuestion, "GitHub") = vbYes Then
+        On Error Resume Next
+        ThisDocument.FollowHyperlink "https://github.com/sBaydin/ZoteroCiteLinker"
+        On Error GoTo 0
+    End If
+End Sub
+
+' Kept for templates whose Ribbon still calls the old About callback.
+Public Sub ZCL_Information(control As IRibbonControl)
+    ZCL_About control
+End Sub
+
+' Displays the supported Zotero styles, grouped by citation format.
+Public Sub ZCL_SupportedStyles(control As IRibbonControl)
+    Dim styles As Collection
+    Dim item As Variant
+    Dim msg As String
+    Dim currentGroup As String
     Dim i As Long
     
-    '--- Initializations ---
-    styles = Split("physical-review-letters|american-physics-society|molecular-plant|ieee|apa|vancouver|american-chemical-society|american-medical-association|nature|" & _
-                   "american-political-science-association|american-sociological-association|chicago-author-date|bmc-medicine|" & _
-                   "china-national-standard-gb-t-7714-2015-numeric|china-national-standard-gb-t-7714-2015-author-date|" & _
-                   "harvard-cite-them-right|elsevier-harvard|modern-language-association|" & _
-                   "archives-of-computational-methods-in-engineering|elsevier-vancouver|sage-vancouver-brackets", "|")
+    Set styles = ZCL_Styles()
     
-    msg = "ZoteroCiteLinker " & ZCL_VERSION & vbCrLf & vbCrLf & "Zotero styles supported by this macro:" & vbCrLf & vbCrLf
+    msg = "ZoteroCiteLinker " & ZCL_VERSION & vbCrLf & vbCrLf & _
+          styles.Count & " Zotero styles supported"
+    currentGroup = ""
     
-    For i = 0 To UBound(styles)
-        msg = msg & i + 1 & ". " & styles(i) & vbCrLf
-    Next
+    For i = 1 To styles.Count
+        item = styles(i)
+        If item(2) <> currentGroup Then
+            currentGroup = item(2)
+            msg = msg & vbCrLf & vbCrLf & currentGroup
+        End If
+        msg = msg & vbCrLf & "  " & item(1) & " - " & item(0)
+    Next i
     
-    MsgBox msg, vbInformation, "Supported Reference Styles"
+    MsgBox msg, vbInformation, "Supported Citation Styles"
 End Sub
 
 '-------------------------------------------------------------------
