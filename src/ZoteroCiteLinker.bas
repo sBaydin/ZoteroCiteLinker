@@ -1464,23 +1464,179 @@ Private Function ZCL_PageLabel(rng As Range) As String
     End If
 End Function
 
-' Returns the Cite_ bookmark that contains the current selection.
+' The title stored in a citation hyperlink's tooltip, or "" when there is none.
+Private Function ZCL_LinkTitle(ByVal hp As Hyperlink) As String
+    Dim s As String
+    
+    On Error Resume Next
+    s = hp.ScreenTip
+    On Error GoTo 0
+    
+    ZCL_LinkTitle = Trim$(s)
+End Function
+
+' Returns the Cite_ bookmark of the bibliography entry under the cursor.
+' The Zotero bibliography is a single field, so entry boundaries cannot be
+' trusted from the bookmarks alone. Strategies, most precise first:
+'   1. the entry title (stored as a citation tooltip) appears in the current
+'      paragraph or line of the bibliography,
+'   2. the closest title before the cursor in the bibliography,
+'   3. the smallest citation bookmark that contains the selection.
 Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim bk As Bookmark
+    Dim hp As Hyperlink
+    Dim aField As field
+    Dim bibRange As Range
+    Dim paraStart As Long
+    Dim paraEnd As Long
+    Dim segStart As Long
+    Dim segEnd As Long
+    Dim segText As String
+    Dim prefixText As String
+    Dim suffixText As String
+    Dim title As String
+    Dim target As String
+    Dim pos As Long
+    Dim bestPos As Long
+    Dim bestName As String
+    Dim bestLen As Long
     Dim selStart As Long
     Dim selEnd As Long
-    
+    Dim p1 As Long
+    Dim p2 As Long
+    Dim p3 As Long
+
     selStart = Selection.Start
     selEnd = Selection.End
-    
+
+    ' The Zotero bibliography field, when the document has one
+    Set bibRange = Nothing
+    For Each aField In doc.Fields
+        If aField.Type = wdFieldAddin Then
+            If InStr(aField.code, "ADDIN ZOTERO_BIBL") > 0 Then
+                Set bibRange = aField.result
+                Exit For
+            End If
+        End If
+    Next aField
+
+    ' 1. Title match inside the paragraph or line at the cursor
+    If Not bibRange Is Nothing Then
+        If selStart >= bibRange.Start And selStart <= bibRange.End Then
+            segStart = bibRange.Start
+            segEnd = bibRange.End
+
+            If selStart > bibRange.Start Then
+                prefixText = doc.Range(bibRange.Start, selStart).Text
+                p1 = InStrRev(prefixText, vbCr)
+                p2 = InStrRev(prefixText, Chr$(11))
+                p3 = InStrRev(prefixText, Chr$(7))
+                If p2 > p1 Then p1 = p2
+                If p3 > p1 Then p1 = p3
+                If p1 > 0 Then segStart = bibRange.Start + p1
+            End If
+
+            If selStart < bibRange.End Then
+                suffixText = doc.Range(selStart, bibRange.End).Text
+                p1 = InStr(suffixText, vbCr)
+                p2 = InStr(suffixText, Chr$(11))
+                p3 = InStr(suffixText, Chr$(7))
+                If p2 > 0 And (p1 = 0 Or p2 < p1) Then p1 = p2
+                If p3 > 0 And (p1 = 0 Or p3 < p1) Then p1 = p3
+                If p1 > 0 Then segEnd = selStart + p1 - 1
+            End If
+
+            If segEnd - segStart <= 1200 Then
+                segText = doc.Range(segStart, segEnd).Text
+                For Each hp In doc.Hyperlinks
+                    title = ZCL_LinkTitle(hp)
+                    If Len(title) >= 12 Then
+                        If InStr(1, segText, title, vbTextCompare) > 0 Then
+                            target = ZCL_LinkTarget(hp)
+                            If ZCL_IsCiteName(target) Then
+                                ZCL_BookmarkAtSelection = target
+                                Exit Function
+                            End If
+                        End If
+                    End If
+                Next hp
+            End If
+
+            ' 2. Closest entry title before the cursor
+            If selStart > bibRange.Start Then
+                prefixText = doc.Range(bibRange.Start, selStart).Text
+            Else
+                prefixText = ""
+            End If
+        Else
+            prefixText = ""
+        End If
+    Else
+        On Error Resume Next
+        paraStart = Selection.Paragraphs(1).Range.Start
+        paraEnd = Selection.Paragraphs(1).Range.End
+        On Error GoTo 0
+
+        prefixText = ""
+        If paraStart > 0 And paraStart < selStart Then
+            prefixText = doc.Range(paraStart, selStart).Text
+        End If
+
+        If paraEnd > paraStart And paraEnd - paraStart <= 1200 Then
+            segText = doc.Range(paraStart, paraEnd).Text
+            For Each hp In doc.Hyperlinks
+                title = ZCL_LinkTitle(hp)
+                If Len(title) >= 12 Then
+                    If InStr(1, segText, title, vbTextCompare) > 0 Then
+                        target = ZCL_LinkTarget(hp)
+                        If ZCL_IsCiteName(target) Then
+                            ZCL_BookmarkAtSelection = target
+                            Exit Function
+                        End If
+                    End If
+                End If
+            Next hp
+        End If
+    End If
+
+    bestPos = 0
+    bestName = ""
+
+    If Len(prefixText) > 0 Then
+        For Each hp In doc.Hyperlinks
+            title = ZCL_LinkTitle(hp)
+            If Len(title) >= 12 Then
+                pos = InStrRev(prefixText, title, -1, vbTextCompare)
+                If pos > bestPos Then
+                    target = ZCL_LinkTarget(hp)
+                    If ZCL_IsCiteName(target) Then
+                        bestPos = pos
+                        bestName = target
+                    End If
+                End If
+            End If
+        Next hp
+    End If
+
+    If Len(bestName) > 0 Then
+        ZCL_BookmarkAtSelection = bestName
+        Exit Function
+    End If
+
+    ' 3. Smallest bookmark that contains the selection
+    bestLen = -1
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then
             If bk.Range.Start <= selStart And bk.Range.End >= selEnd Then
-                ZCL_BookmarkAtSelection = bk.name
-                Exit Function
+                If bestLen < 0 Or (bk.Range.End - bk.Range.Start) < bestLen Then
+                    bestLen = bk.Range.End - bk.Range.Start
+                    bestName = bk.name
+                End If
             End If
         End If
     Next bk
+
+    ZCL_BookmarkAtSelection = bestName
 End Function
 
 ' Asks where to save the audit report. Returns "" when the user cancels.
@@ -1547,21 +1703,11 @@ Private Function ZCL_EnsureHtmlExt(ByVal path As String) As String
     ZCL_EnsureHtmlExt = path
 End Function
 
-' Opens a local file in its default application.
+' Opens a local file with Word's own handler (no external process is
+' started, which keeps virus scanners calm).
 Private Sub ZCL_OpenFile(ByVal filePath As String)
-    Dim cmd As String
-    
     On Error Resume Next
-    #If Mac Then
-        cmd = "open " & Chr$(34) & filePath & Chr$(34)
-    #Else
-        cmd = "cmd /c start """" """ & filePath & """"
-    #End If
-    Shell cmd, vbHide
-    If Err.Number <> 0 Then
-        Err.Clear
-        ThisDocument.FollowHyperlink filePath
-    End If
+    ThisDocument.FollowHyperlink Address:=filePath
     On Error GoTo 0
 End Sub
 
@@ -1603,6 +1749,8 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     Dim rng As Range
     Dim label As String
     Dim pageText As String
+    Dim firstTitle As String
+    Dim bkText As String
     
     Set doc = ActiveDocument
     targetName = ZCL_BookmarkAtSelection(doc)
@@ -1615,7 +1763,8 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     End If
     
     Set bk = doc.Bookmarks(targetName)
-    label = ZCL_ShortText(bk.Range.Text, 110)
+    bkText = bk.Range.Text
+    label = ZCL_ShortText(bkText, 110)
     
     ReDim starts(0 To 0)
     ReDim ends(0 To 0)
@@ -1631,6 +1780,7 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
             ReDim Preserve pages(0 To n - 1)
             ReDim Preserve texts(0 To n - 1)
             
+            If Len(firstTitle) = 0 Then firstTitle = ZCL_LinkTitle(hp)
             starts(n - 1) = hp.Range.Start
             ends(n - 1) = hp.Range.End
             pages(n - 1) = ZCL_PageOf(hp.Range)
@@ -1642,6 +1792,11 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
         MsgBox label & vbCrLf & vbCrLf & "No citations point to this entry.", _
                vbInformation, "Cited By"
         Exit Sub
+    End If
+    
+    ' A bookmark that covers the whole bibliography gives a useless label
+    If Len(bkText) > 1000 And Len(firstTitle) > 0 Then
+        label = ZCL_ShortText(firstTitle, 110)
     End If
     
     prompt = label & vbCrLf & vbCrLf & "Cited " & n & " time"
@@ -1687,9 +1842,11 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     Dim labels As Object
     Dim counts As Object
     Dim pagesText As Object
+    Dim titles As Object
     Dim names As Collection
     Dim bkName As String
     Dim target As String
+    Dim label As String
     Dim citFields As Long
     Dim unlinked As Long
     Dim orphans As Long
@@ -1699,31 +1856,52 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     Dim html As String
     Dim lines As Variant
     Dim path As String
+    Dim folder As String
+    Dim pageCount As Long
     Dim f As Integer
     Dim i As Long
     Dim errNum As Long
     Dim errDesc As String
-    
+    Dim reportTitle As String
+
     Set doc = ActiveDocument
     Set labels = CreateDict()
     Set counts = CreateDict()
     Set pagesText = CreateDict()
+    Set titles = CreateDict()
     Set names = New Collection
-    
-    ' 1. Bibliography entries that carry a bookmark from this add-in
+
+    ' 1. Titles from the citation tooltips, used when a bookmark covers the
+    '    whole bibliography instead of a single entry
+    For Each hp In doc.Hyperlinks
+        target = ZCL_LinkTarget(hp)
+        If ZCL_IsCiteName(target) Then
+            If Not titles.Exists(target) Then
+                titles.Item(target) = ZCL_LinkTitle(hp)
+            End If
+        End If
+    Next hp
+
+    ' 2. Bibliography entries that carry a bookmark from this add-in
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then
             bkName = bk.name
             If Not labels.Exists(bkName) Then
-                labels.Item(bkName) = ZCL_ShortText(bk.Range.Text, 150)
+                label = bk.Range.Text
+                If Len(label) > 1000 Then
+                    label = ""
+                    If titles.Exists(bkName) Then label = CStr(titles.Item(bkName))
+                    If Len(label) = 0 Then label = bkName
+                End If
+                labels.Item(bkName) = ZCL_ShortText(label, 150)
                 counts.Item(bkName) = 0
                 pagesText.Item(bkName) = ""
                 names.Add bkName
             End If
         End If
     Next bk
-    
-    ' 2. Citation links in the document
+
+    ' 3. Citation links in the document
     For Each hp In doc.Hyperlinks
         target = ZCL_LinkTarget(hp)
         If ZCL_IsCiteName(target) Then
@@ -1736,8 +1914,8 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
             End If
         End If
     Next hp
-    
-    ' 3. Citation fields that carry no link at all
+
+    ' 4. Citation fields that carry no link at all
     For Each aField In doc.Fields
         If aField.Type = wdFieldAddin Then
             If InStr(aField.code, "ADDIN ZOTERO_ITEM") > 0 Then
@@ -1748,34 +1926,58 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
             End If
         End If
     Next aField
-    
+
     For i = 1 To names.Count
         If CLng(counts.Item(names(i))) = 0 Then uncited = uncited + 1
     Next i
-    
+
     If names.Count = 0 Then
         MsgBox "No linked references were found in this document." & vbCrLf & vbCrLf & _
                "Run Link All first, then run the audit again.", vbExclamation, "Citation Audit"
         Exit Sub
     End If
-    
-    ' 4. Build the report
+
+    folder = doc.Path
+    pageCount = 0
+    On Error Resume Next
+    pageCount = doc.ComputeStatistics(wdStatisticPages)
+    On Error GoTo 0
+
+    ' 5. Build the report
+    reportTitle = "ZoteroCiteLinker " & ZCL_VERSION & " Audit Report"
+
     html = "<!DOCTYPE html>" & vbCrLf
     html = html & "<html><head><meta charset=""utf-8"">" & vbCrLf
-    html = html & "<title>Citation audit</title>" & vbCrLf
+    html = html & "<title>" & ZCL_HtmlEscape(reportTitle) & "</title>" & vbCrLf
     html = html & "<style>" & vbCrLf
     html = html & "body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;margin:32px;color:#222}" & vbCrLf
-    html = html & "h1{font-size:22px;margin-bottom:4px}h2{font-size:16px;margin-top:28px}" & vbCrLf
-    html = html & ".meta{color:#666;font-size:13px;margin-bottom:20px}" & vbCrLf
+    html = html & "h1{font-size:26px;text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px}" & vbCrLf
+    html = html & ".meta{color:#555;font-size:13px;margin:0 0 24px;line-height:1.7}" & vbCrLf
+    html = html & ".meta b{color:#222}" & vbCrLf
+    html = html & "h2{font-size:16px;margin-top:28px}" & vbCrLf
     html = html & "table{border-collapse:collapse;font-size:13px;width:100%}" & vbCrLf
     html = html & "th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top}" & vbCrLf
     html = html & "th{background:#f4f4f4}tr:nth-child(even) td{background:#fafafa}" & vbCrLf
+    html = html & "th.sortable{cursor:pointer;user-select:none}th.sortable:hover{background:#e9e9e9}" & vbCrLf
+    html = html & "th.sortable[data-dir=asc]:after{content:' [A-Z]'}th.sortable[data-dir=desc]:after{content:' [Z-A]'}" & vbCrLf
+    html = html & "th.num[data-dir=asc]:after{content:' [0-9]'}th.num[data-dir=desc]:after{content:' [9-0]'}" & vbCrLf
     html = html & ".num{text-align:right;white-space:nowrap}.zero{color:#b00;font-weight:600}" & vbCrLf
+    html = html & ".toolbar{display:flex;gap:14px;align-items:center;margin:12px 0 10px;font-size:13px}" & vbCrLf
+    html = html & ".toolbar input[type=search]{width:280px;padding:6px 8px;border:1px solid #ccc;border-radius:4px}" & vbCrLf
+    html = html & ".hint{color:#777;font-size:12px;margin:8px 0 0}" & vbCrLf
     html = html & "</style></head><body>" & vbCrLf
-    html = html & "<h1>Citation audit</h1>" & vbCrLf
-    html = html & "<div class=""meta"">" & ZCL_HtmlEscape(doc.name) & " &middot; ZoteroCiteLinker " & _
-                  ZCL_VERSION & " &middot; " & Format$(Now, "yyyy-mm-dd hh:nn") & "</div>" & vbCrLf
-    
+    html = html & "<h1>" & ZCL_HtmlEscape(reportTitle) & "</h1>" & vbCrLf
+    html = html & "<div class=""meta"">" & vbCrLf
+    html = html & "<div><b>Document:</b> " & ZCL_HtmlEscape(doc.name) & "</div>" & vbCrLf
+    If Len(folder) > 0 Then
+        html = html & "<div><b>Folder:</b> " & ZCL_HtmlEscape(folder) & "</div>" & vbCrLf
+    End If
+    html = html & "<div><b>Generated:</b> " & Format$(Now, "yyyy-mm-dd") & " " & Format$(Now, "hh:nn") & "</div>" & vbCrLf
+    If pageCount > 0 Then
+        html = html & "<div><b>Pages:</b> " & pageCount & "</div>" & vbCrLf
+    End If
+    html = html & "</div>" & vbCrLf
+
     html = html & "<h2>Summary</h2>" & vbCrLf & "<table>" & vbCrLf
     html = html & "<tr><th>References with a bookmark</th><td class=""num"">" & names.Count & "</td></tr>" & vbCrLf
     html = html & "<tr><th>Citation links</th><td class=""num"">" & links & "</td></tr>" & vbCrLf
@@ -1784,7 +1986,7 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     html = html & "<tr><th>Fields without a link</th><td class=""num"">" & unlinked & "</td></tr>" & vbCrLf
     html = html & "<tr><th>Links to a missing entry</th><td class=""num"">" & orphans & "</td></tr>" & vbCrLf
     html = html & "</table>" & vbCrLf
-    
+
     html = html & "<h2>Uncited references (" & uncited & ")</h2>" & vbCrLf
     If uncited = 0 Then
         html = html & "<p>Every reference is cited at least once.</p>" & vbCrLf
@@ -1798,31 +2000,70 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
         Next i
         html = html & "</table>" & vbCrLf
     End If
-    
+
     html = html & "<h2>References and their citations (" & names.Count & ")</h2>" & vbCrLf
-    html = html & "<table><tr><th>Reference</th><th>Citations</th><th>Pages</th></tr>" & vbCrLf
+    html = html & "<div class=""toolbar"">" & vbCrLf
+    html = html & "<input id=""q"" type=""search"" placeholder=""Filter references..."">" & vbCrLf
+    html = html & "<label><input id=""onlyUncited"" type=""checkbox""> Only uncited</label>" & vbCrLf
+    html = html & "</div>" & vbCrLf
+    html = html & "<table id=""refs"">" & vbCrLf
+    html = html & "<thead><tr>" & _
+                  "<th class=""sortable"" data-sort=""text"">Reference</th>" & _
+                  "<th class=""sortable num"" data-sort=""num"">Citations</th>" & _
+                  "<th class=""sortable"" data-sort=""firstnum"">Pages</th>" & _
+                  "</tr></thead>" & vbCrLf
+    html = html & "<tbody>" & vbCrLf
     For i = 1 To names.Count
         bkName = names(i)
-        pageList = ""
-        If Len(pagesText.Item(bkName)) > 0 Then
-            pageList = Mid$(pagesText.Item(bkName), 2)
-            pageList = Replace(pageList, "|", ", ")
-        End If
-        
-        html = html & "<tr><td>" & ZCL_HtmlEscape(labels.Item(bkName)) & "</td>"
+        pageList = ZCL_UniquePages(CStr(pagesText.Item(bkName)))
+
+        html = html & "<tr data-uncited=""" & IIf(CLng(counts.Item(bkName)) = 0, "1", "0") & """>"
+        html = html & "<td>" & ZCL_HtmlEscape(labels.Item(bkName)) & "</td>"
         html = html & "<td class=""num"
         If CLng(counts.Item(bkName)) = 0 Then html = html & " zero"
         html = html & """>" & counts.Item(bkName) & "</td>"
         html = html & "<td>" & pageList & "</td></tr>" & vbCrLf
     Next i
-    html = html & "</table>" & vbCrLf
-    
+    html = html & "</tbody></table>" & vbCrLf
+    html = html & "<p class=""hint"">Click a column header to sort the table, or type in the box to filter it.</p>" & vbCrLf
+
+    html = html & "<script>" & vbCrLf
+    html = html & "(function(){" & vbCrLf
+    html = html & "var t=document.getElementById('refs'),q=document.getElementById('q'),u=document.getElementById('onlyUncited');" & vbCrLf
+    html = html & "if(!t||!t.tHead||!t.tBodies[0])return;" & vbCrLf
+    html = html & "var body=t.tBodies[0],heads=t.tHead.rows[0].cells,dir={};" & vbCrLf
+    html = html & "function rows(){return Array.prototype.slice.call(body.rows);}" & vbCrLf
+    html = html & "function apply(){" & vbCrLf
+    html = html & "var s=q&&q.value?q.value.toLowerCase():'',only=u&&u.checked;" & vbCrLf
+    html = html & "rows().forEach(function(r){" & vbCrLf
+    html = html & "var hit=r.cells[0].textContent.toLowerCase().indexOf(s)>=0;" & vbCrLf
+    html = html & "var unc=r.getAttribute('data-uncited')==='1';" & vbCrLf
+    html = html & "r.style.display=(hit&&(!only||unc))?'':'none';});}" & vbCrLf
+    html = html & "function key(t,m){if(m==='num')return parseFloat(t)||0;" & vbCrLf
+    html = html & "if(m==='firstnum')return parseInt(t,10)||0;return t;}" & vbCrLf
+    html = html & "function sortBy(i,numeric){" & vbCrLf
+    html = html & "var d=dir[i]==='asc'?'desc':'asc';dir[i]=d;" & vbCrLf
+    html = html & "for(var k=0;k<heads.length;k++){heads[k].removeAttribute('data-dir');}" & vbCrLf
+    html = html & "heads[i].setAttribute('data-dir',d);" & vbCrLf
+    html = html & "rows().sort(function(a,b){" & vbCrLf
+    html = html & "var x=a.cells[i].textContent.trim(),y=b.cells[i].textContent.trim();" & vbCrLf
+    html = html & "var v=key(x,numeric).toString().localeCompare(key(y,numeric).toString(),'en',{numeric:true});" & vbCrLf
+    html = html & "return d==='asc'?v:-v;}).forEach(function(r){body.appendChild(r);});" & vbCrLf
+    html = html & "apply();}" & vbCrLf
+    html = html & "for(var j=0;j<heads.length;j++){(function(j){var h=heads[j];" & vbCrLf
+    html = html & "if(!h.getAttribute('data-sort'))return;" & vbCrLf
+    html = html & "h.addEventListener('click',function(){sortBy(j,h.getAttribute('data-sort'));});})(j);}" & vbCrLf
+    html = html & "if(q)q.addEventListener('input',apply);" & vbCrLf
+    html = html & "if(u)u.addEventListener('change',apply);" & vbCrLf
+    html = html & "})();" & vbCrLf
+    html = html & "</script>" & vbCrLf
+
     html = html & "</body></html>" & vbCrLf
-    
-    ' 5. Ask where to save, then write the file
+
+    ' 6. Ask where to save, then write the file
     path = ZCL_AskSavePath(ZCL_DefaultAuditPath(doc))
     If Len(path) = 0 Then Exit Sub
-    
+
     On Error GoTo WriteFailed
     f = FreeFile
     Open path For Output As #f
@@ -1832,7 +2073,7 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     Next i
     Close #f
     On Error GoTo 0
-    
+
     If MsgBox("Report saved to:" & vbCrLf & path & vbCrLf & vbCrLf & "Open it now?", _
               vbYesNo + vbQuestion, "Citation Audit") = vbYes Then
         ZCL_OpenFile path
@@ -1848,6 +2089,37 @@ WriteFailed:
     MsgBox "The report could not be written:" & vbCrLf & path & vbCrLf & vbCrLf & _
            "Error " & errNum & ": " & errDesc, vbCritical, "Citation Audit"
 End Sub
+
+' Turns "|3|12|12|31" into "3, 12, 31".
+Private Function ZCL_UniquePages(ByVal raw As String) As String
+    Dim parts() As String
+    Dim seen As Object
+    Dim i As Long
+    Dim p As String
+    Dim out As String
+
+    If Len(raw) = 0 Then
+        ZCL_UniquePages = "-"
+        Exit Function
+    End If
+
+    Set seen = CreateDict()
+    parts = Split(Mid$(raw, 2), "|")
+
+    For i = 0 To UBound(parts)
+        p = Trim$(parts(i))
+        If Len(p) > 0 Then
+            If Not seen.Exists(p) Then
+                seen.Item(p) = 1
+                If Len(out) > 0 Then out = out & ", "
+                out = out & p
+            End If
+        End If
+    Next i
+
+    If Len(out) = 0 Then out = "-"
+    ZCL_UniquePages = out
+End Function
 
 '-------------------------------------------------------------------
 ' ZOTERO LINK CITATION
@@ -2105,6 +2377,14 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                     If rngBibliography.Find.found Then
                         Set rngFound = rngBibliography.Duplicate
                         rngFound.Expand Unit:=wdParagraph
+
+                        ' Zotero's bibliography can collapse into one large
+                        ' paragraph. In that case only bookmark the line that
+                        ' holds the entry, so one entry never covers all of them.
+                        If Len(rngFound.Text) > 1200 Then
+                            Set rngFound = rngBibliography.Duplicate
+                            rngFound.Expand Unit:=wdLine
+                        End If
 
                         If Right(rngFound.Text, 1) = vbCr Then
                             rngFound.End = rngFound.End - 1

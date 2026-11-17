@@ -137,14 +137,17 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Cited By (`ZCL_CitedBy`)**
     * Put the cursor anywhere inside a bibliography entry, then press this button. A dialog shows the reference and lists every citation that points to it, each with its page number and a short text snippet.
+    * The entry is identified by the citation titles stored in the document, so it also works when Zotero's bibliography behaves as one large field.
     * Type the number of an entry and press OK to jump straight to that citation in the text. Press Cancel (or leave the box empty) to close without moving.
     * It reads the links that **Link All** created, so run Link All first if the bibliography has no links yet. Nothing is written into the document.
 
 * **Citation Audit (`ZCL_CitationAudit`)**
-    * Produces a single self-contained HTML report about the citation structure of the document:
+    * Produces a single self-contained HTML report about the citation structure of the document. The report is headed **ZOTEROCITELINKER 2.5.0 AUDIT REPORT** with the document name, folder, date and page count underneath.
+    * Contents:
         * a summary (references, citation links, uncited references, citation fields, fields without a link, links to a missing entry),
         * the list of **references that are never cited**, which is the fastest way to find a source you forgot to use,
-        * every reference with its citation count and the pages it is cited on.
+        * every reference with its citation count and the (unique) pages it is cited on.
+    * The reference table is interactive: click **Reference**, **Citations** or **Pages** to sort it, type in the filter box to narrow it down, and tick **Only uncited** to see just the unused sources.
     * The report is **not** written to a fixed path. A Save As dialog opens with a suggested name (`<document>-citation-audit.html`) next to the document; you choose the folder and file name, and nothing is saved if you cancel.
     * The file opens correctly on any platform, and it can be opened afterwards in any browser or kept as an appendix for a supervisor.
 
