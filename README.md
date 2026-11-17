@@ -13,6 +13,9 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Smart Unlinking:** Safely remove *only* the links created by this add-in, without touching your Table of Contents or other hyperlinks.
 * **Structured Bookmarks:** Generates clean, human-readable bookmarks (e.g., `Cite_id1234_Title_2020_Author`) for easy navigation and management in Word's bookmark dialog.
 * **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
+* **Cited By:** Put the cursor in a bibliography entry and see every citation that points to it, with page numbers.
+* **Citation Audit:** Export an HTML report of every reference, how often it is cited and which references are never used.
+* **Link Check:** Verify that the citation links in the document still reach their bibliography entries.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
 * **Compatibility:** Works with over 20 common Zotero citation styles (listed in the "How to Use" section below).
 * **Cross-Platform:** One `.dotm` runs on Word for Windows and Word for macOS.
@@ -130,6 +133,26 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * The reverse of the above. This removes all `http://` and `mailto:` hyperlinks from the entire document.
     * This **does not** touch your Zotero citation links.
 
+### Analysis
+
+* **Cited By (`ZCL_CitedBy`)**
+    * Put the cursor anywhere inside a bibliography entry, then press this button. A dialog shows the reference and lists every citation that points to it, each with its page number and a short text snippet.
+    * Type the number of an entry and press OK to jump straight to that citation in the text. Press Cancel (or leave the box empty) to close without moving.
+    * It reads the links that **Link All** created, so run Link All first if the bibliography has no links yet. Nothing is written into the document.
+
+* **Citation Audit (`ZCL_CitationAudit`)**
+    * Produces a single self-contained HTML report about the citation structure of the document:
+        * a summary (references, citation links, uncited references, citation fields, fields without a link, links to a missing entry),
+        * the list of **references that are never cited**, which is the fastest way to find a source you forgot to use,
+        * every reference with its citation count and the pages it is cited on.
+    * The report is **not** written to a fixed path. A Save As dialog opens with a suggested name (`<document>-citation-audit.html`) next to the document; you choose the folder and file name, and nothing is saved if you cancel.
+    * The file opens correctly on any platform, and it can be opened afterwards in any browser or kept as an appendix for a supervisor.
+
+* **Check Links (`ZCL_CheckLinks`)**
+    * Scans the document and reports how many Zotero citation fields exist, how many of them carry a link, how many are not linked, and how many links point to a bibliography bookmark that no longer exists.
+    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to run **Link All** again to repair them.
+    * It also removes any leftover temporary bookmarks from an interrupted linking run.
+
 ### Formatting & Help
 
 * **Change Color (`ZCL_ChangeColor`)**
@@ -137,11 +160,6 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Set Style (`ZCL_SetCitationStyle`)**
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
-
-* **Check Links (`ZCL_CheckLinks`)**
-    * Scans the document and reports how many Zotero citation fields exist, how many of them carry a link, how many are not linked, and how many links point to a bibliography bookmark that no longer exists.
-    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to run **Link All** again to repair them.
-    * It also removes any leftover temporary bookmarks from an interrupted linking run.
 
 * **Supported Styles (`ZCL_SupportedStyles`)**
     * Displays a pop-up box listing all 21 citation styles supported by the add-in's engine, grouped by type:

@@ -51,6 +51,19 @@
                   size="large" 
                   onAction="ZCL_SetCitationStyle" 
                   imageMso="StylesModifyStyle" />        
+        </group>
+
+        <group id="gAnalysis" label="Analysis">
+          <button id="bCitedBy" 
+                  label="Cited By" 
+                  size="large" 
+                  onAction="ZCL_CitedBy" 
+                  imageMso="CrossReferenceInsert" /> 
+          <button id="bAudit" 
+                  label="Citation Audit" 
+                  size="large" 
+                  onAction="ZCL_CitationAudit" 
+                  imageMso="Bibliography" /> 
           <button id="bCheck" 
                   label="Check Links" 
                   size="large" 
