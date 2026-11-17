@@ -1590,12 +1590,13 @@ Private Sub ZCL_TrimToEntry(doc As Document, rng As Range, ByVal anchor As Long)
 End Sub
 
 ' Returns the Cite_ bookmark of the bibliography entry under the cursor.
-' Bookmarks cannot be trusted on their own: Zotero stores the bibliography as
-' one field, so entries are located through the citation titles that are kept
-' in the hyperlink tooltips. Strategies, most precise first:
-'   1. a title that shares its break-delimited chunk with the cursor,
-'   2. the closest title before the cursor,
-'   3. the smallest citation bookmark that contains the selection.
+' Zotero stores the bibliography as one field, so entries are located from
+' the break-delimited chunk that holds the cursor. Strategies, most precise
+' first:
+'   1. the citation bookmark that starts inside that chunk,
+'   2. a citation title that appears inside that chunk,
+'   3. the closest title before the cursor,
+'   4. the smallest citation bookmark that contains the selection.
 Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim bk As Bookmark
     Dim hp As Hyperlink
@@ -1617,6 +1618,10 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim cEnd As Long
     Dim paraStart As Long
     Dim paraEnd As Long
+    Dim docStart As Long
+    Dim docEnd As Long
+    Dim bestStart As Long
+    Dim dist As Long
 
     selStart = Selection.Start
     selEnd = Selection.End
@@ -1661,7 +1666,33 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     If offset < 1 Then offset = 1
     If offset > Len(flat) Then offset = Len(flat)
 
-    ' 1. A title that lives in the same entry as the cursor
+    ' Boundaries of the bibliography entry under the cursor
+    Call ZCL_ChunkBounds(text, offset, cStart, cEnd)
+    docStart = base + cStart - 1
+    docEnd = base + cEnd - 1
+
+    ' 1. The citation bookmark that starts inside the entry under the
+    ' cursor. This does not depend on the title text at all.
+    bestStart = -1
+    bestName = ""
+    For Each bk In doc.Bookmarks
+        If ZCL_IsCiteName(bk.name) Then
+            If bk.Range.Start >= docStart And bk.Range.Start <= docEnd Then
+                dist = Abs(bk.Range.Start - selStart)
+                If bestStart < 0 Or dist < bestStart Then
+                    bestStart = dist
+                    bestName = bk.name
+                End If
+            End If
+        End If
+    Next bk
+
+    If Len(bestName) > 0 Then
+        ZCL_BookmarkAtSelection = bestName
+        Exit Function
+    End If
+
+    ' 2. A title that lives in the same entry as the cursor
     For Each hp In doc.Hyperlinks
         If Len(ZCL_LinkTitle(hp)) >= 12 Then
             flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
@@ -1680,7 +1711,7 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
         End If
     Next hp
 
-    ' 2. Closest entry title before the cursor
+    ' 3. Closest entry title before the cursor
     bestPos = 0
     bestName = ""
     For Each hp In doc.Hyperlinks
@@ -1702,7 +1733,7 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
         Exit Function
     End If
 
-    ' 3. Smallest bookmark that contains the selection
+    ' 4. Smallest bookmark that contains the selection
     bestLen = -1
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then

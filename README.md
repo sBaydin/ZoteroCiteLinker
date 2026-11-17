@@ -137,7 +137,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Cited By (`ZCL_CitedBy`)**
     * Put the cursor anywhere inside a bibliography entry, then press this button. A dialog shows the reference and lists every citation that points to it, each with its page number and a short text snippet.
-    * The entry is identified by the citation titles stored in the document, so it also works when Zotero's bibliography behaves as one large field.
+    * The entry is located from the real entry boundaries of the bibliography, so it also works when Zotero's bibliography behaves as one large field with wrapped or multi-line entries.
     * Type the number of an entry and press OK to jump straight to that citation in the text. Press Cancel (or leave the box empty) to close without moving.
     * It reads the links that **Link All** created, so run Link All first if the bibliography has no links yet. Nothing is written into the document.
 
