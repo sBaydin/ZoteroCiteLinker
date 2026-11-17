@@ -33,8 +33,9 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.3.0"
+Public Const ZCL_VERSION As String = "2.4.0"
 
+Private Const ZCL_TEMP_PREFIX As String = "ZoteroLinkCitationTempBookmark"
 Private Const ZCL_REPO_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker"
 Private Const ZCL_RELEASES_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker/releases/latest"
 Private Const ZCL_LATEST_API As String = "https://api.github.com/repos/sBaydin/ZoteroCiteLinker/releases/latest"
@@ -1218,6 +1219,153 @@ Private Function ZCL_CompareVersions(ByVal a As String, ByVal b As String) As Lo
 End Function
 
 '-------------------------------------------------------------------
+' LINK HEALTH CHECK
+'-------------------------------------------------------------------
+
+' Counts the Zotero citation fields so a progress figure can be shown.
+Private Function ZCL_CountCitationFields(targetFields) As Long
+    Dim aField As field
+    
+    For Each aField In targetFields
+        If aField.Type = wdFieldAddin Then
+            If InStr(aField.code, "ADDIN ZOTERO_ITEM") > 0 Then
+                ZCL_CountCitationFields = ZCL_CountCitationFields + 1
+            End If
+        End If
+    Next aField
+End Function
+
+' Counts leftover temporary bookmarks from an interrupted linking run.
+Private Function ZCL_TempBookmarkCount(doc As Document) As Long
+    Dim bk As Bookmark
+    
+    For Each bk In doc.Bookmarks
+        If Left$(bk.name, Len(ZCL_TEMP_PREFIX)) = ZCL_TEMP_PREFIX Then
+            ZCL_TempBookmarkCount = ZCL_TempBookmarkCount + 1
+        End If
+    Next bk
+End Function
+
+' Deletes leftover temporary bookmarks from an interrupted linking run.
+Private Sub ZCL_DeleteTempBookmarks(doc As Document)
+    Dim names As Collection
+    Dim bk As Bookmark
+    Dim target As String
+    Dim i As Long
+    
+    Set names = New Collection
+    For Each bk In doc.Bookmarks
+        If Left$(bk.name, Len(ZCL_TEMP_PREFIX)) = ZCL_TEMP_PREFIX Then
+            names.Add bk.name
+        End If
+    Next bk
+    
+    For i = 1 To names.Count
+        target = CStr(names(i))
+        On Error Resume Next
+        If doc.Bookmarks.Exists(target) Then doc.Bookmarks(target).Delete
+        On Error GoTo 0
+    Next i
+End Sub
+
+' Restores application state after a linking run, including after a cancel.
+Private Sub ZCL_EndLinkRun()
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+    Application.EnableCancelKey = wdCancelDisabled
+    
+    On Error Resume Next
+    If ActiveDocument Is Nothing Then Exit Sub
+    ZCL_DeleteTempBookmarks ActiveDocument
+    On Error GoTo 0
+End Sub
+
+' Reports whether the citation links in the active document are still healthy.
+Public Sub ZCL_CheckLinks(control As IRibbonControl)
+    Dim doc As Document
+    Dim aField As field
+    Dim hp As Hyperlink
+    Dim citFields As Long
+    Dim linked As Long
+    Dim unlinked As Long
+    Dim broken As Long
+    Dim stale As Long
+    Dim brokenList As String
+    Dim target As String
+    Dim msg As String
+    
+    Set doc = ActiveDocument
+    
+    ' 1. Citation fields, and how many of them carry a hyperlink
+    For Each aField In doc.Fields
+        If aField.Type = wdFieldAddin Then
+            If InStr(aField.code, "ADDIN ZOTERO_ITEM") > 0 Then
+                citFields = citFields + 1
+                On Error Resume Next
+                If aField.result.Hyperlinks.Count = 0 Then unlinked = unlinked + 1
+                On Error GoTo 0
+            End If
+        End If
+    Next aField
+    
+    ' 2. Citation links, and whether their target bookmark still exists
+    For Each hp In doc.Hyperlinks
+        target = ""
+        On Error Resume Next
+        target = hp.SubAddress
+        On Error GoTo 0
+        
+        If Left$(target, 1) = "#" Then target = Mid$(target, 2)
+        
+        If UCase$(Left$(target, 5)) = "CITE_" Then
+            linked = linked + 1
+            If Not doc.Bookmarks.Exists(target) Then
+                broken = broken + 1
+                If broken <= 3 Then
+                    brokenList = brokenList & vbCrLf & "  " & target
+                End If
+            End If
+        End If
+    Next hp
+    
+    ' 3. Leftover temporary bookmarks from an interrupted run
+    stale = ZCL_TempBookmarkCount(doc)
+    If stale > 0 Then ZCL_DeleteTempBookmarks doc
+    
+    msg = "ZoteroCiteLinker Link Check" & vbCrLf & vbCrLf & _
+          "Citation fields:  " & citFields & vbCrLf & _
+          "Citation links:   " & linked & vbCrLf & _
+          "Not linked:       " & unlinked & vbCrLf & _
+          "Broken links:     " & broken
+    
+    If broken > 0 Then
+        msg = msg & vbCrLf & vbCrLf & "Broken targets:" & brokenList
+        If broken > 3 Then msg = msg & vbCrLf & "  ..."
+    End If
+    
+    If stale > 0 Then
+        msg = msg & vbCrLf & vbCrLf & "Removed " & stale & " leftover temporary bookmark(s)."
+    End If
+    
+    If citFields = 0 Then
+        MsgBox msg & vbCrLf & vbCrLf & "No Zotero citation fields were found in this document.", _
+               vbInformation, "Link Check"
+        Exit Sub
+    End If
+    
+    If unlinked = 0 And broken = 0 Then
+        MsgBox msg & vbCrLf & vbCrLf & "All citations are linked.", _
+               vbInformation, "Link Check"
+        Exit Sub
+    End If
+    
+    If MsgBox(msg & vbCrLf & vbCrLf & "Run Link All now to rebuild the links?", _
+              vbYesNo + vbQuestion, "Link Check") = vbYes Then
+        ZCL_LinkCitationAll Nothing
+    End If
+End Sub
+
+'-------------------------------------------------------------------
 ' ZOTERO LINK CITATION
 '-------------------------------------------------------------------
 
@@ -1252,6 +1400,12 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
     Dim authorForName As String, yearForName As String, titleSnippet As String
     Dim titleAnchor As String
     Dim searchTitle As String
+    
+    ' Progress and cancellation
+    Dim totalFields As Long
+    Dim processed As Long
+    Dim errNum As Long
+    Dim errDesc As String
 
     '--- Initializations ---
     Set prefs = GetZoteroPrefs()
@@ -1313,11 +1467,21 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
         Err.Raise vbObjectError + 513, , "Can not find Zotero bibliography field."
     End If
 
+    '--- Progress and cancellation ---
+    totalFields = ZCL_CountCitationFields(targetFields)
+    processed = 0
+    Application.EnableCancelKey = wdCancelInterrupt
+    On Error GoTo ZCL_LinkAborted
+
     ' Iterate through all fields in the document
     For Each aField In targetFields
         ' Check if the field is a Zotero citation
         If aField.Type = wdFieldAddin Then
             If InStr(aField.code, "ADDIN ZOTERO_ITEM") > 0 Then
+
+                processed = processed + 1
+                Application.StatusBar = "ZoteroCiteLinker: citation " & processed & " of " & totalFields & "..."
+                If processed Mod 10 = 0 Then DoEvents
 
                 If debugging Then
                     ' Focus to next field
@@ -1352,7 +1516,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                 On Error Resume Next
                 hasOneItem = (json.Item("CSL.citationItems(0).id") <> "")
                 hasManyItems = (json.Item("CSL.citationItems(1).id") <> "")
-                On Error GoTo 0
+                On Error GoTo ZCL_LinkAborted
                 
                 If hasOneItem And Not hasManyItems Then
                     ' LOGIC: SINGLE CITATION (including custom text)
@@ -1370,7 +1534,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                          yearVal = json.Item("CSL.citationItems(0).itemData.issued.date-parts(0)(0)")
                     End If
                     cits(0).BibYear = yearVal
-                    On Error GoTo 0
+                    On Error GoTo ZCL_LinkAborted
                 
                 Else
                     ' LOGIC: GROUPED CITATION OR EMPTY FIELD (This is a grouped citation (e.g., [1, 5-7]) or an empty/broken field.)
@@ -1382,7 +1546,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                 For i = 0 To UBound(cits)
                     cit = cits(i)
                     Set rng = aField.result.Document.Range(Start:=cit.Start, End:=cit.End)
-                    tempBookmarkName = "ZoteroLinkCitationTempBookmark" & i
+                    tempBookmarkName = ZCL_TEMP_PREFIX & i
                     ActiveDocument.Bookmarks.Add name:=tempBookmarkName, Range:=rng
                 Next i
 
@@ -1475,7 +1639,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
 
                     ' Create hyperlink according to temporary bookmark
                     Set hp = ActiveDocument.Hyperlinks.Add( _
-                        Anchor:=ActiveDocument.Bookmarks("ZoteroLinkCitationTempBookmark" & i).Range, _
+                        Anchor:=ActiveDocument.Bookmarks(ZCL_TEMP_PREFIX & i).Range, _
                         SubAddress:=titleAnchor, ScreenTip:=titleToSearch) 'ScreenTip set displayed information of hyperlink
                     hp.Range.Font.Underline = wdUnderlineNone 'Remove hyperlink underline
                     
@@ -1487,7 +1651,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                     iCount = iCount + 1
 
 SkipToNextCitation:
-                    ActiveDocument.Bookmarks("ZoteroLinkCitationTempBookmark" & i).Delete
+                    ActiveDocument.Bookmarks(ZCL_TEMP_PREFIX & i).Delete
 
                 Next i
 
@@ -1500,7 +1664,27 @@ SkipToNextField: ' Label for skipping a field (e.g., in debug mode or for empty 
 
 ExitTheMacro:
 
+    ZCL_EndLinkRun
+
     If notify Then MsgBox "Linked " & iCount & " Zotero citations.", vbInformation, "Finish"
+
+    Exit Sub
+
+ZCL_LinkAborted:
+    errNum = Err.Number
+    errDesc = Err.Description
+    Err.Clear
+
+    ZCL_EndLinkRun
+
+    If errNum = 18 Then
+        MsgBox "Linking cancelled." & vbCrLf & vbCrLf & _
+               "Linked " & iCount & " citations before stopping.", _
+               vbInformation, "Cancelled"
+        Exit Sub
+    End If
+
+    Err.Raise errNum, "ZoteroCiteLinker", errDesc
 
 End Sub
 

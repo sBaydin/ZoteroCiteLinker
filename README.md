@@ -107,6 +107,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Link All Citations (`ZCL_LinkCitationAll`)**
     * This is the main button. It first unlinks all previous citations and then automatically scans and links every Zotero citation in your document. A message will appear showing how many links were created.
+    * While it runs, Word's status bar shows the progress (`citation 12 of 180`). Press **Esc** to stop early; the links created so far are kept and leftover temporary bookmarks are removed.
     * **Requirement:** The Zotero application must be running for this to work.
 
 * **Link Selectively (`ZCL_LinkCitationSelect`)**
@@ -136,6 +137,11 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Set Style (`ZCL_SetCitationStyle`)**
     * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
+
+* **Check Links (`ZCL_CheckLinks`)**
+    * Scans the document and reports how many Zotero citation fields exist, how many of them carry a link, how many are not linked, and how many links point to a bibliography bookmark that no longer exists.
+    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to run **Link All** again to repair them.
+    * It also removes any leftover temporary bookmarks from an interrupted linking run.
 
 * **Supported Styles (`ZCL_SupportedStyles`)**
     * Displays a pop-up box listing all 21 citation styles supported by the add-in's engine, grouped by type:

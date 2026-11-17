@@ -51,6 +51,11 @@
                   size="large" 
                   onAction="ZCL_SetCitationStyle" 
                   imageMso="StylesModifyStyle" />        
+          <button id="bCheck" 
+                  label="Check Links" 
+                  size="large" 
+                  onAction="ZCL_CheckLinks" 
+                  imageMso="ReviewAcceptChange" /> 
         </group>
 
         <group id="gHelp" label="Help &amp; Updates">
