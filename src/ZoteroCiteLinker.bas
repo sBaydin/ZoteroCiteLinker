@@ -39,6 +39,11 @@ Public Const ZCL_VERSION As String = "2.6.0"
 ' otherwise the class instance is destroyed as soon as it is created.
 Public gZCLApp As ZCLAppEvents
 
+' Documents that already had their one repair offer in this Word session.
+Private gZCLPrompted As Collection
+' Set while the links are being rebuilt, so our own events are ignored.
+Private gZCLBusy As Boolean
+
 Private Const ZCL_TEMP_PREFIX As String = "ZoteroLinkCitationTempBookmark"
 ' Custom document property holding the link fingerprint of the last rebuild.
 Private Const ZCL_SIG_PROP As String = "ZCL_LINK_SIG"
@@ -1484,11 +1489,6 @@ Private Sub ZCL_ForgetSignature(doc As Document)
     Err.Clear
     On Error GoTo 0
 End Sub
-
-' Documents that already had their one repair offer in this Word session.
-Private gZCLPrompted As Collection
-' Set while the links are being rebuilt, to ignore our own events.
-Private gZCLBusy As Boolean
 
 Private Function ZCL_DocKey(doc As Document) As String
     On Error Resume Next
