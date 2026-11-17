@@ -36,6 +36,12 @@ Public gUserTextStyle As String
 Public Const ZCL_VERSION As String = "2.5.0"
 
 Private Const ZCL_TEMP_PREFIX As String = "ZoteroLinkCitationTempBookmark"
+
+#If Mac Then
+    Private Const ZCL_PATH_SEP As String = "/"
+#Else
+    Private Const ZCL_PATH_SEP As String = "\"
+#End If
 Private Const ZCL_REPO_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker"
 Private Const ZCL_RELEASES_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker/releases/latest"
 Private Const ZCL_LATEST_API As String = "https://api.github.com/repos/sBaydin/ZoteroCiteLinker/releases/latest"
@@ -1524,7 +1530,7 @@ Private Function ZCL_EnsureHtmlExt(ByVal path As String) As String
     
     dotPos = InStrRev(path, ".")
     If dotPos > 0 Then
-        If InStr(dotPos, path, Application.PathSeparator) = 0 Then
+        If InStr(dotPos, path, "\") = 0 And InStr(dotPos, path, "/") = 0 Then
             ext = LCase$(Mid$(path, dotPos + 1))
         End If
     End If
@@ -1576,7 +1582,7 @@ Private Function ZCL_DefaultAuditPath(doc As Document) As String
     If dotPos > 1 Then baseName = Left$(baseName, dotPos - 1)
     If Len(baseName) = 0 Then baseName = "document"
     
-    ZCL_DefaultAuditPath = folder & Application.PathSeparator & baseName & "-citation-audit.html"
+    ZCL_DefaultAuditPath = folder & ZCL_PATH_SEP & baseName & "-citation-audit.html"
 End Function
 
 ' Lists the citations that point to the bibliography entry under the cursor.
@@ -1592,7 +1598,7 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     Dim n As Long
     Dim i As Long
     Dim prompt As String
-    Dim answer As Variant
+    Dim answer As String
     Dim pick As Long
     Dim rng As Range
     Dim label As String
@@ -1654,9 +1660,12 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     
     MsgBox prompt, vbInformation, "Cited By"
     
-    answer = Application.InputBox("Type a number between 1 and " & n & " to jump to that citation.", _
-                                  "Cited By", 1, Type:=1)
+    answer = InputBox("Type a number between 1 and " & n & " to jump to that citation." & vbCrLf & vbCrLf & _
+                      "Leave it empty, or press Cancel, to close this dialog.", _
+                      "Cited By", "1")
     
+    answer = Trim$(answer)
+    If Len(answer) = 0 Then Exit Sub
     If Not IsNumeric(answer) Then Exit Sub
     pick = CLng(answer)
     If pick < 1 Or pick > n Then Exit Sub
