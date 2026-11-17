@@ -1,30 +1,139 @@
 # ZoteroCiteLinker
 
-An MS Word Add-in that creates an interactive bridge between your in-text Zotero citations and your bibliography, all from a convenient custom Ribbon tab.
+**Turn every in-text Zotero citation into a clickable link to its bibliography entry.**
 
-This add-in scans your document for Zotero-generated citation fields (e.g., `[1]`, `(Author, 2020)`) and intelligently links them to the corresponding entries in your bibliography, allowing for instant navigation.
+![Version](https://img.shields.io/badge/version-2.6.0-2f6feb)
+![Platform](https://img.shields.io/badge/platform-Word%20Windows%20%7C%20macOS-1f6feb)
+![License](https://img.shields.io/badge/license-MIT-2ea44f)
+![Styles](https://img.shields.io/badge/citation%20styles-21-d73a4a)
+
+ZoteroCiteLinker is a Word add-in that reads the Zotero citation fields already in your document — `[1]`, `(Author, 2020)`, `(Author, 2020, p. 14)` — and links each one to the matching entry in your Zotero bibliography. One click, and every citation becomes a jump target: forward to the reference, back to the sentence that used it.
+
+It also tells you what your citations look like: which references are never cited, how many times each one is used, on which pages, and whether any link has gone stale.
+
+**[⬇️ Download ZoteroCiteLinker.dotm](https://github.com/sBaydin/ZoteroCiteLinker/releases/latest/download/ZoteroCiteLinker.dotm)** · [All releases](https://github.com/sBaydin/ZoteroCiteLinker/releases) · [What's new in 2.6.0](https://github.com/sBaydin/ZoteroCiteLinker/releases/tag/v2.6.0)
 
 ![ZoteroCiteLinker Ribbon](images/ss.png)
 
-## 🌟 Features
+## ✨ What it does
 
-* **One-Click Linking:** Automatically link all citations in the document.
-* **Step-by-Step Linking:** A manual "debug" mode to process citations one by one.
-* **Smart Unlinking:** Safely remove *only* the links created by this add-in, without touching your Table of Contents or other hyperlinks.
-* **Structured Bookmarks:** Generates clean, human-readable bookmarks (e.g., `Cite_id1234_Title_2020_Author`) for easy navigation and management in Word's bookmark dialog.
-* **Utility Functions:** Activate (or separately remove) all web URLs and email addresses in your document.
-* **Cited By:** Put the cursor in a bibliography entry and see every citation that points to it, with page numbers.
-* **Citation Audit:** Export an HTML report of every reference, how often it is cited and which references are never used.
-* **Link Check:** Verify that the citation links in the document still reach their bibliography entries.
-* **Self-Healing Links:** The links remember the document they belong to. When Zotero rebuilds the bibliography, the add-in notices the change and offers a one-click repair.
-* **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
-* **Compatibility:** Works with over 20 common Zotero citation styles (listed in the "How to Use" section below).
-* **Cross-Platform:** One `.dotm` runs on Word for Windows and Word for macOS.
+* **One-click linking** — every citation in the document, linked in a single pass.
+* **Links that stay alive** — the document remembers its own link state, so a rebuilt bibliography gets a one-click repair instead of a manual relink.
+* **Cited By** — put the cursor on a reference and see every citation that points back to it, with page numbers.
+* **Citation Audit** — an interactive HTML report: uncited sources, citation counts, pages, broken links.
+* **Link Check** — a plain answer to "are my links still working?", with the broken ones listed.
+* **URL and e-mail activation** — for the bibliography, or for the whole document.
+* **Formatting** — colour the citations, or apply your own Word character style.
+* **21 citation styles**, numeric and author–year, all bundled.
+* **One file, two platforms** — the same `.dotm` runs on Word for Windows and Word for macOS.
+
+## 🚀 Install
+
+The add-in is a single `.dotm` file placed in Word's trusted STARTUP folder. Word then loads the **Zotero Linker** tab on every start.
+
+Requirements: Word 2010 or newer on Windows, Word 2016 or newer on macOS, and Zotero 6 or 7 with its Word plugin installed.
+
+### Windows
+
+1. **[Download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/releases/latest/download/ZoteroCiteLinker.dotm)** (right-click → *Save As…* if your browser opens it instead).
+2. In Word: **File → Options → Trust Center → Trust Center Settings… → Trusted Locations**. Find the entry described as **User STARTUP** and copy its path — usually
+   `C:\Users\<YourUserName>\AppData\Roaming\Microsoft\Word\STARTUP`.
+3. Paste that path into File Explorer's address bar and copy the `.dotm` into the folder.
+4. Restart Word. If a yellow **SECURITY WARNING** bar appears, click **Enable Content**. The **Zotero Linker** tab is now on the ribbon.
+
+### macOS
+
+1. Download the same file.
+2. In Finder press `Shift + Command + G` and open
+   `~/Library/Group Containers/UBF8T346G9.Office/User Content/Startup/Word`.
+3. Move `ZoteroCiteLinker.dotm` into that folder.
+4. Restart Word and click **Enable Macros**. The **Zotero Linker** tab appears.
+
+The shipped `.dotm` is the same on both platforms: Word for macOS has no `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in carries a Mac-specific code path internally.
+
+<details>
+<summary>Building from source</summary>
+
+The `src/` folder is only needed to inspect or rebuild the add-in. Open the base template in Word, press `Option + F11` (macOS) or `Alt + F11` (Windows), then use **File → Import File…** to import:
+
+* `src/ZoteroCiteLinker.bas` — the add-in itself,
+* `src/ZCLAppEvents.cls` — the document events used by the self-healing check,
+* `src/CustomDictionary.cls` — the macOS dictionary replacement.
+
+Then **Debug → Compile VBAProject** and save as a macro-enabled template. The ribbon lives in `src/customUI14.xml`.
+
+</details>
+
+## ⚠️ Before you start
+
+**Back up your document.** These are macros that rewrite links and formatting; a backup copy is the difference between a five-second undo and a lost afternoon. Unlinking and relinking is safe by design, but a backup costs nothing.
+
+## 📖 The ribbon, button by button
+
+Descriptions follow the left-to-right order of the tabs: **Linking Tools**, **Unlinking Tools**, **Utilities**, **Analysis**, **Help & Updates**.
+
+### Linking Tools
+
+* **Link All (Automatic)** — removes the previous links and relinks every Zotero citation in the document, reporting how many were created. The status bar shows the progress (`citation 12 of 180`); press **Esc** to stop early, and the links made so far are kept. Zotero must be running.
+* **Link All (Step-by-Step)** — the same pass, one citation group at a time, asking Yes / No / Cancel for each. Useful when a document has citations the automatic pass should skip. Zotero must be running.
+* **Unlink All Citations** — removes only the links this add-in created and resets their colour. Web links, e-mails and your table of contents are left alone.
+
+After a successful pass the document stores a small fingerprint of its own link state. That is what makes the links self-healing: the next time the document is opened, a fingerprint mismatch is repaired with a single question instead of a silent failure, and a document that was never linked is skipped without any scan. Repairing never needs Zotero to be running, because the citation data lives inside the citation fields.
+
+### Unlinking Tools
+
+* **Link Bibliography URLs** — finds plain-text URLs inside the bibliography and makes them clickable.
+* **Link Emails** — finds e-mail addresses anywhere in the document and turns them into `mailto:` links.
+* **Unlink URLs/Emails** — removes every `http://` and `mailto:` link in the document, leaving citation links untouched.
+
+### Utilities
+
+* **Change Color Citations** — pick a colour (Blue, Red, Auto/Black, …) and apply it to every Zotero citation at once.
+* **Change Style Citations** — apply a Word *character* style (e.g. *Emphasis*) to the citations. A paragraph style is refused on purpose, because it would reformat whole paragraphs.
+
+### Analysis
+
+* **Cited By** — put the cursor anywhere inside a bibliography entry and press the button. A dialog shows the reference and lists up to twelve citations pointing to it, each with page number and a short snippet; type a number to jump there. Works with wrapped and multi-line entries, where Zotero keeps the whole bibliography in one field. Nothing is written into the document.
+* **Citation Audit** — builds one self-contained HTML report: a summary, the references that are never cited, and every reference with its citation count and the pages it appears on. The table sorts by column, filters as you type, and has an **Only uncited** switch. It always asks where to save (suggested name `<document>-citation-audit.html`); cancel and nothing is written.
+* **Check Links** — reports how many Zotero fields the document has, how many carry a link, how many do not, and how many links point at a bibliography entry that no longer exists — the usual damage after Zotero rebuilds a bibliography and a title or year changes. It lists the first broken targets, offers to rebuild the links in place, and clears leftover temporary bookmarks from an interrupted run.
+
+### Help & Updates
+
+* **Supported Styles** — lists the 21 bundled citation styles, grouped by type (table below).
+* **Check for Updates** — asks GitHub for the newest release. On Word for Windows it compares versions directly; on macOS, where VBA cannot make HTTP requests, it opens the releases page.
+* **GitHub** — opens the repository.
+* **About** — version, author, licence.
+
+### Supported citation styles
+
+| Type | Style | Zotero style ID |
+| :--- | :--- | :--- |
+| Author-Year | American Political Science Ass. | `american-political-science-association` |
+| Author-Year | American Psychological Ass. (APA) | `apa` |
+| Author-Year | American Sociological Ass. (ASA) | `american-sociological-association` |
+| Author-Year | Chicago Manual of Style (Author-Date) | `chicago-author-date` |
+| Author-Year | China National Standard (Author-Date) | `china-national-standard-gb-t-7714-2015-author-date` |
+| Author-Year | Cite Them Right - Harvard | `harvard-cite-them-right` |
+| Author-Year | Elsevier - Harvard | `elsevier-harvard` |
+| Author-Year | Molecular Plant | `molecular-plant` |
+| Author-only | Modern Language Association (MLA) | `modern-language-association` |
+| Numeric | American Chemical Society (ACS) | `american-chemical-society` |
+| Numeric | American Physical Society (APS) | `american-physics-society` |
+| Numeric | Physical Review Letters (PRL) | `physical-review-letters` |
+| Numeric | American Medical Association (AMA) | `american-medical-association` |
+| Numeric | Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
+| Numeric | BMC Medicine | `bmc-medicine` |
+| Numeric | China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
+| Numeric | Elsevier - NLM/Vancouver | `elsevier-vancouver` |
+| Numeric | SAGE - NLM/Vancouver (brackets) | `sage-vancouver-brackets` |
+| Numeric | IEEE | `ieee` |
+| Numeric | Nature | `nature` |
+| Numeric | Vancouver | `vancouver` |
 
 ## 🖼️ Screenshots
 
 <details>
-<summary>Click to see the add-in in action (9 images)</summary>
+<summary>See the add-in in action (9 images)</summary>
 <br>
 
 <table>
@@ -47,183 +156,27 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 
 </details>
 
-## 💾 Installation Instructions
+## 🧩 Versions
 
-This add-in is installed by placing the `.dotm` file into Word's trusted STARTUP folder. This will automatically load the "Zotero Linker" Ribbon tab every time you open Word.
+Current release: **2.6.0** (November 2026)
 
-### Windows
+| Version | Highlights |
+| :--- | :--- |
+| **2.6.0** | Self-healing links, Check Links repairs in place, fixed Citation Audit icon |
+| **2.5.0** | Cited By, Citation Audit, new Analysis group, entry-aware bibliography matching |
+| **2.4.0** | Check Links, linking progress and Esc to cancel, no more `cmd.exe` false positive |
+| **2.3.0** | Help & Updates group: Supported Styles, Check for Updates, GitHub, About |
+| **2.2.0** | One build for Windows and macOS, SAGE NLM/Vancouver (brackets) style |
 
-1.  **Get the File:**
-    * **[Click here to download `ZoteroCiteLinker.dotm`](https://github.com/sBaydin/ZoteroCiteLinker/releases/latest/download/ZoteroCiteLinker.dotm)**
-    *(You may need to right-click the link and select "Save As...")*
-    * To download an older version, browse [all releases](https://github.com/sBaydin/ZoteroCiteLinker/releases).
-
-2.  **Find your Word STARTUP Folder:**
-    * Open MS Word.
-    * Go to **File** -> **Options** -> **Trust Center**.
-    * Click the **Trust Center Settings...** button.
-    * Go to the **Trusted Locations** tab.
-    * In the list, find the location with the description "**User STARTUP**".
-    * **Click on it and copy the full path** from the bottom of the window.
-    * The path will look something like this:
-        `C:\Users\<YourUserName>\AppData\Roaming\Microsoft\Word\STARTUP`
-
-3.  **Copy the Add-in File:**
-    * Open Windows File Explorer.
-    * Paste the path you just copied into the address bar and press **Enter**.
-    * Copy the `ZoteroCiteLinker.dotm` file into this `STARTUP` folder.
-
-4.  **Restart Word & Enable Content:**
-    * Close MS Word completely and re-open it.
-    * When Word starts, it will likely show a yellow **"SECURITY WARNING"** bar at the top, stating "Macros have been disabled."
-    * You **must** click the **"Enable Content"** button. This tells Word to trust the add-in.
-    * You should now see a new **"Zotero Linker"** tab on your Word Ribbon.
-
-### macOS
-
-The same `.dotm` runs on Word for macOS; there is no separate Mac build.
-
-1.  **Get the File:** use the same download link above.
-2.  **Open Word's STARTUP folder:** in Finder, choose **Go > Go to Folder...** (`Shift + Command + G`) and enter:
-    `~/Library/Group Containers/UBF8T346G9.Office/User Content/Startup/Word`
-3.  **Copy the Add-in File:** move `ZoteroCiteLinker.dotm` into that folder.
-4.  **Restart Word & Enable Macros:** close and reopen Word, then click **Enable Macros** when prompted. The **Zotero Linker** tab should appear.
-
-macOS Word does not provide `Scripting.Dictionary`, `VBScript.RegExp` or `MSXML2`, so the add-in has a Mac-specific code path (included in the shipped `.dotm`).
-
-The source in `src/` is only needed to inspect or rebuild the add-in: import `src/ZoteroCiteLinker.bas` and `src/CustomDictionary.cls` (it must be a Class Module) with **File > Import File...** (`Option + F11` opens the VBA editor), then save as a macro-enabled template.
-
-If you hit a macOS-specific problem, please report it in the issue tracker.
-
-## ⚠️ Important: Backup Your Work!
-
-Before running any macros that modify your document (like "Link All Citations" or "Set Style"), it is **strongly recommended** that you **save a backup copy** of your work.
-
-While this add-in is designed to be safe, a macro-driven error, an unexpected interaction with other add-ins, or a mistake (like applying a Paragraph Style) could lead to unintended changes. A backup ensures you can always revert to a safe version of your document.
-
-## 📖 How to Use: The Ribbon Guide
-
-![ZoteroCiteLinker Ribbon](images/ss.png)
-
-Here is a breakdown of each button on the "Zotero Linker" tab.
-
-### Main Functions
-
-* **Link All Citations (`ZCL_LinkCitationAll`)**
-    * This is the main button. It first unlinks all previous citations and then automatically scans and links every Zotero citation in your document. A message will appear showing how many links were created.
-    * While it runs, Word's status bar shows the progress (`citation 12 of 180`). Press **Esc** to stop early; the links created so far are kept and leftover temporary bookmarks are removed.
-    * **Requirement:** The Zotero application must be running for this to work.
-
-* **Link Selectively (`ZCL_LinkCitationSelect`)**
-    * This is a debug/manual mode. It will go through the document one citation field at a time and ask you (Yes/No/Cancel) if you want to process that specific group.
-    * **Requirement:** The Zotero application must be running.
-
-* **Unlink Citations (`ZCL_UnlinkCitations`)**
-    * Safely removes *only* the hyperlinks from your Zotero citations (bookmarks starting with `CITE_`). It also automatically resets their color back to black (Auto).
-    * This **does not** touch other hyperlinks in your document (like web links or your Table of Contents).
-
-### Utility Functions
-
-* **Activate URLs (in Bib) (`ZCL_LinkBibliographyURLs`)**
-    * This utility scans *only* your Zotero Bibliography section and converts all text URLs (e.g., `http://...`) into active, clickable hyperlinks.
-
-* **Activate Emails (All) (`ZCL_LinkEmails`)**
-    * This utility scans your *entire document* (not just the bibliography) and converts all email addresses (e.g., `name@domain.com`) into active `mailto:` links.
-
-* **Unlink Web/Mail (`ZCL_UnlinkURLsMail`)**
-    * The reverse of the above. This removes all `http://` and `mailto:` hyperlinks from the entire document.
-    * This **does not** touch your Zotero citation links.
-
-### Analysis
-
-* **Cited By (`ZCL_CitedBy`)**
-    * Put the cursor anywhere inside a bibliography entry, then press this button. A dialog shows the reference and lists every citation that points to it, each with its page number and a short text snippet.
-    * The entry is located from the real entry boundaries of the bibliography, so it also works when Zotero's bibliography behaves as one large field with wrapped or multi-line entries.
-    * Type the number of an entry and press OK to jump straight to that citation in the text. Press Cancel (or leave the box empty) to close without moving.
-    * It reads the links that **Link All** created, so run Link All first if the bibliography has no links yet. Nothing is written into the document.
-
-* **Citation Audit (`ZCL_CitationAudit`)**
-    * Produces a single self-contained HTML report about the citation structure of the document. The report is headed **ZOTEROCITELINKER 2.6.0 AUDIT REPORT** with the document name, folder, date and page count underneath.
-    * Contents:
-        * a summary (references, citation links, uncited references, citation fields, fields without a link, links to a missing entry),
-        * the list of **references that are never cited**, which is the fastest way to find a source you forgot to use,
-        * every reference with its citation count and the (unique) pages it is cited on.
-    * The reference table is interactive: click **Reference**, **Citations** or **Pages** to sort it, type in the filter box to narrow it down, and tick **Only uncited** to see just the unused sources.
-    * The report is **not** written to a fixed path. A Save As dialog opens with a suggested name (`<document>-citation-audit.html`) next to the document; you choose the folder and file name, and nothing is saved if you cancel.
-    * The file opens correctly on any platform, and it can be opened afterwards in any browser or kept as an appendix for a supervisor.
-
-* **Check Links (`ZCL_CheckLinks`)**
-    * Scans the document and reports how many Zotero citation fields exist, how many of them carry a link, how many are not linked, and how many links point to a bibliography bookmark that no longer exists.
-    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to rebuild the links in place.
-    * It also removes any leftover temporary bookmarks from an interrupted linking run.
-
-### Self-Healing Links
-
-Every time a document is linked, the add-in stores a small fingerprint in the document itself: how many Zotero citation fields it has, how many citation bookmarks, and a checksum of the bookmark names. Nothing else is stored, and the document looks exactly the same in Zotero and in Word.
-
-When the document is opened (or Word switches back to its window), that fingerprint is compared with the live document:
-
-* **No full scan at open.** The comparison reads two counters and the names of the bookmarks this add-in created, so it costs milliseconds even in a 500-page document.
-* **Nothing happens on a normal open.** A document that was never linked by this add-in is skipped immediately.
-* **A mismatch produces one question per document per Word session:** *"Citation links out of date — rebuild all citation links now?"* Answer **Yes** and the links are rebuilt in place; answer **No** and you are not asked again for that document until Word is restarted.
-* **Repairing does not need Zotero**, because the citation data lives in the citation fields themselves.
-* **Unlinking resets it.** A document you unlinked on purpose is not reported as broken.
-
-The same check is what makes **Check Links** useful later: it still lists the details, and its repair offer now uses the same rebuild path.
-
-### Formatting & Help
-
-
-* **Change Color (`ZCL_ChangeColor`)**
-    * Opens a simple menu asking you to pick a color by number (Blue, Red, Auto/Black, etc.). This will apply your chosen color to all Zotero citation fields in the document.
-
-* **Set Style (`ZCL_SetCitationStyle`)**
-    * (Advanced) Allows you to apply a specific Word "Character Style" (e.g., "Emphasis") to your citations for custom formatting. A warning will appear, as applying a "Paragraph Style" by mistake can reformat your document.
-
-* **Supported Styles (`ZCL_SupportedStyles`)**
-    * Displays a pop-up box listing all 21 citation styles supported by the add-in's engine, grouped by type:
-
-| Style Type | Proper Name | Zotero Style ID |
-| :--- | :--- | :--- |
-| **Author-Year** | American Political Science Ass. | `american-political-science-association` |
-| **Author-Year** | American Psychological Ass. (APA) | `apa` |
-| **Author-Year** | American Sociological Ass. (ASA) | `american-sociological-association` |
-| **Author-Year** | Chicago Manual of Style (Author-Date) | `chicago-author-date` |
-| **Author-Year** | China National Standard (Author-Date) | `china-national-standard-gb-t-7714-2015-author-date` |
-| **Author-Year** | Cite Them Right - Harvard | `harvard-cite-them-right` |
-| **Author-Year** | Elsevier - Harvard | `elsevier-harvard` |
-| **Author-Year** | Molecular Plant | `molecular-plant` |
-| **Author-only** | Modern Language Association (MLA) | `modern-language-association` |
-| **Numeric** | American Chemical Society (ACS) | `american-chemical-society` |
-| **Numeric** | American Physical Society (APS) | `american-physics-society` |
-| **Numeric** | Physical Review Letters (PRL) | `physical-review-letters` |
-| **Numeric** | American Medical Association (AMA) | `american-medical-association` |
-| **Numeric** | Archives of Comp. Methods in Eng. | `archives-of-computational-methods-in-engineering` |
-| **Numeric** | BMC Medicine | `bmc-medicine` |
-| **Numeric** | China National Standard (Numeric) | `china-national-standard-gb-t-7714-2015-numeric` |
-| **Numeric** | Elsevier - NLM/Vancouver | `elsevier-vancouver` |
-| **Numeric** | SAGE - NLM/Vancouver (brackets) | `sage-vancouver-brackets` |
-| **Numeric** | IEEE | `ieee` |
-| **Numeric** | Nature | `nature` |
-| **Numeric** | Vancouver | `vancouver` |
-
-* **About (`ZCL_About`)**
-    * Shows the add-in version, the author, the GitHub address and the license.
-    * The older `ZCL_Information` callback is kept as an alias, so templates built with an earlier Ribbon still open the About dialog.
-
-* **Check for Updates (`ZCL_CheckUpdates`)**
-    * Asks GitHub for the newest published release and compares it with the running version. If a newer release exists, it offers to open the download page.
-    * Word for Windows can query GitHub directly. Word for macOS cannot make HTTP requests from VBA, so there the button offers to open the releases page instead.
-
-* **GitHub (`ZCL_OpenGitHub`)**
-    * Opens the repository page in your default browser.
+Older releases, checksums and full notes: [github.com/sBaydin/ZoteroCiteLinker/releases](https://github.com/sBaydin/ZoteroCiteLinker/releases). Updating is the same as installing: close Word, replace the `.dotm`, start Word again.
 
 ## 🤝 Acknowledgments
 
-This add-in was built by modifying the excellent foundational code from:
+This add-in is built on the excellent foundation of:
+
 * [altairwei/ZoteroLinkCitation](https://github.com/altairwei/ZoteroLinkCitation)
 * [8gengen8/ZoteroCitationLink-lgg](https://github.com/8gengen8/ZoteroCitationLink-lgg)
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
