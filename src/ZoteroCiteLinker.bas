@@ -1387,16 +1387,92 @@ Private Function ZCL_IsCiteName(ByVal name As String) As Boolean
     ZCL_IsCiteName = (UCase$(Left$(name, 5)) = "CITE_")
 End Function
 
+' Replaces the characters that break word searches (paragraph marks, line
+' breaks, tabs, non-breaking spaces) with plain spaces. The length of the
+' string is preserved, so positions found in the flattened text still point
+' at the same characters of the original text.
+Private Function ZCL_FlattenText(ByVal s As String) As String
+    s = Replace(s, vbCr, " ")
+    s = Replace(s, Chr$(10), " ")
+    s = Replace(s, Chr$(11), " ")
+    s = Replace(s, Chr$(7), " ")
+    s = Replace(s, Chr$(9), " ")
+    s = Replace(s, Chr$(160), " ")
+    ZCL_FlattenText = s
+End Function
+
+' Returns the bounds (1-based, inside text) of the break-delimited chunk that
+' contains offset. Zotero can store the whole bibliography in one paragraph
+' whose entries are separated by line-break characters, so a "paragraph" is
+' not necessarily a single entry.
+Private Sub ZCL_ChunkBounds(ByVal text As String, ByVal offset As Long, _
+                            ByRef chunkStart As Long, ByRef chunkEnd As Long)
+    Dim head As String
+    Dim tail As String
+    Dim p As Long
+    Dim q As Long
+
+    chunkStart = 1
+    chunkEnd = Len(text)
+
+    If offset < 1 Then offset = 1
+    If offset > Len(text) Then offset = Len(text)
+
+    ' Last break before the offset
+    head = Left$(text, offset)
+    p = InStrRev(head, vbCr)
+    q = InStrRev(head, Chr$(10)): If q > p Then p = q
+    q = InStrRev(head, Chr$(11)): If q > p Then p = q
+    q = InStrRev(head, Chr$(7)): If q > p Then p = q
+    If p > 0 Then chunkStart = p + 1
+
+    ' First break after the offset
+    tail = Mid$(text, offset)
+    q = InStr(tail, vbCr)
+    p = InStr(tail, Chr$(10))
+    If p > 0 And (q = 0 Or p < q) Then q = p
+    p = InStr(tail, Chr$(11))
+    If p > 0 And (q = 0 Or p < q) Then q = p
+    p = InStr(tail, Chr$(7))
+    If p > 0 And (q = 0 Or p < q) Then q = p
+    If q > 0 Then chunkEnd = offset + q - 1
+End Sub
+
+' Text of the bibliography entry that contains a document position. The
+' paragraph is used when it is short enough; otherwise only the chunk that
+' holds the position is returned, so one entry never reports the text of its
+' neighbours.
+Private Function ZCL_EntryTextAt(doc As Document, ByVal pos As Long) As String
+    Dim rng As Range
+    Dim text As String
+    Dim chunkStart As Long
+    Dim chunkEnd As Long
+    
+    On Error Resume Next
+    Set rng = doc.Range(pos, pos)
+    If rng Is Nothing Then Exit Function
+    rng.Expand wdParagraph
+    text = rng.Text
+    On Error GoTo 0
+    
+    If Len(text) = 0 Then Exit Function
+    
+    If Len(text) > 1200 Then
+        Call ZCL_ChunkBounds(text, pos - rng.Start + 1, chunkStart, chunkEnd)
+        If chunkEnd >= chunkStart Then
+            text = Mid$(text, chunkStart, chunkEnd - chunkStart + 1)
+        End If
+    End If
+    
+    ZCL_EntryTextAt = ZCL_FlattenText(text)
+End Function
+
 ' Collapses whitespace and shortens a text to a readable label.
 Private Function ZCL_ShortText(ByVal s As String, ByVal maxLen As Long) As String
     Dim cut As String
     Dim lastSpace As Long
     
-    s = Replace(s, vbCr, " ")
-    s = Replace(s, Chr$(10), " ")
-    s = Replace(s, Chr$(7), " ")
-    s = Replace(s, Chr$(9), " ")
-    s = Replace(s, Chr$(160), " ")
+    s = ZCL_FlattenText(s)
     
     Do While InStr(s, "  ") > 0
         s = Replace(s, "  ", " ")
@@ -1475,36 +1551,72 @@ Private Function ZCL_LinkTitle(ByVal hp As Hyperlink) As String
     ZCL_LinkTitle = Trim$(s)
 End Function
 
+' Shrinks a paragraph-sized range to the bibliography entry that holds anchor.
+' Zotero can keep the whole bibliography in one paragraph separated only by
+' line-break characters, so the paragraph itself is not the entry.
+Private Sub ZCL_TrimToEntry(doc As Document, rng As Range, ByVal anchor As Long)
+    Dim paraStart As Long
+    Dim paraEnd As Long
+    Dim text As String
+    Dim cStart As Long
+    Dim cEnd As Long
+    Dim offset As Long
+    
+    If Len(rng.Text) <= 1200 Then Exit Sub
+    
+    On Error Resume Next
+    paraStart = rng.Paragraphs(1).Range.Start
+    paraEnd = rng.Paragraphs(1).Range.End
+    On Error GoTo 0
+    
+    If paraEnd <= paraStart Then Exit Sub
+    
+    text = doc.Range(paraStart, paraEnd).Text
+    If Len(text) = 0 Then Exit Sub
+    
+    offset = anchor - paraStart + 1
+    If offset < 1 Then offset = 1
+    If offset > Len(text) Then offset = Len(text)
+    
+    Call ZCL_ChunkBounds(text, offset, cStart, cEnd)
+    If cEnd < cStart Then Exit Sub
+    
+    ' No delimiter in the whole paragraph: keep the bookmark usable by
+    ' starting it at the matched title instead of covering everything.
+    If cEnd - cStart > 1200 Then cStart = offset
+    
+    rng.Start = paraStart + cStart - 1
+    rng.End = paraStart + cEnd - 1
+End Sub
+
 ' Returns the Cite_ bookmark of the bibliography entry under the cursor.
-' The Zotero bibliography is a single field, so entry boundaries cannot be
-' trusted from the bookmarks alone. Strategies, most precise first:
-'   1. the entry title (stored as a citation tooltip) appears in the current
-'      paragraph or line of the bibliography,
-'   2. the closest title before the cursor in the bibliography,
+' Bookmarks cannot be trusted on their own: Zotero stores the bibliography as
+' one field, so entries are located through the citation titles that are kept
+' in the hyperlink tooltips. Strategies, most precise first:
+'   1. a title that shares its break-delimited chunk with the cursor,
+'   2. the closest title before the cursor,
 '   3. the smallest citation bookmark that contains the selection.
 Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim bk As Bookmark
     Dim hp As Hyperlink
     Dim aField As field
     Dim bibRange As Range
-    Dim paraStart As Long
-    Dim paraEnd As Long
-    Dim segStart As Long
-    Dim segEnd As Long
-    Dim segText As String
-    Dim prefixText As String
-    Dim suffixText As String
-    Dim title As String
+    Dim text As String
+    Dim flat As String
+    Dim flatTitle As String
     Dim target As String
-    Dim pos As Long
-    Dim bestPos As Long
     Dim bestName As String
+    Dim bestPos As Long
     Dim bestLen As Long
     Dim selStart As Long
     Dim selEnd As Long
-    Dim p1 As Long
-    Dim p2 As Long
-    Dim p3 As Long
+    Dim base As Long
+    Dim offset As Long
+    Dim pos As Long
+    Dim cStart As Long
+    Dim cEnd As Long
+    Dim paraStart As Long
+    Dim paraEnd As Long
 
     selStart = Selection.Start
     selEnd = Selection.End
@@ -1520,103 +1632,70 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
         End If
     Next aField
 
-    ' 1. Title match inside the paragraph or line at the cursor
+    text = ""
+    base = 0
+
     If Not bibRange Is Nothing Then
         If selStart >= bibRange.Start And selStart <= bibRange.End Then
-            segStart = bibRange.Start
-            segEnd = bibRange.End
-
-            If selStart > bibRange.Start Then
-                prefixText = doc.Range(bibRange.Start, selStart).Text
-                p1 = InStrRev(prefixText, vbCr)
-                p2 = InStrRev(prefixText, Chr$(11))
-                p3 = InStrRev(prefixText, Chr$(7))
-                If p2 > p1 Then p1 = p2
-                If p3 > p1 Then p1 = p3
-                If p1 > 0 Then segStart = bibRange.Start + p1
-            End If
-
-            If selStart < bibRange.End Then
-                suffixText = doc.Range(selStart, bibRange.End).Text
-                p1 = InStr(suffixText, vbCr)
-                p2 = InStr(suffixText, Chr$(11))
-                p3 = InStr(suffixText, Chr$(7))
-                If p2 > 0 And (p1 = 0 Or p2 < p1) Then p1 = p2
-                If p3 > 0 And (p1 = 0 Or p3 < p1) Then p1 = p3
-                If p1 > 0 Then segEnd = selStart + p1 - 1
-            End If
-
-            If segEnd - segStart <= 1200 Then
-                segText = doc.Range(segStart, segEnd).Text
-                For Each hp In doc.Hyperlinks
-                    title = ZCL_LinkTitle(hp)
-                    If Len(title) >= 12 Then
-                        If InStr(1, segText, title, vbTextCompare) > 0 Then
-                            target = ZCL_LinkTarget(hp)
-                            If ZCL_IsCiteName(target) Then
-                                ZCL_BookmarkAtSelection = target
-                                Exit Function
-                            End If
-                        End If
-                    End If
-                Next hp
-            End If
-
-            ' 2. Closest entry title before the cursor
-            If selStart > bibRange.Start Then
-                prefixText = doc.Range(bibRange.Start, selStart).Text
-            Else
-                prefixText = ""
-            End If
-        Else
-            prefixText = ""
+            base = bibRange.Start
+            text = doc.Range(bibRange.Start, bibRange.End).Text
         End If
-    Else
+    End If
+
+    If Len(text) = 0 Then
         On Error Resume Next
         paraStart = Selection.Paragraphs(1).Range.Start
         paraEnd = Selection.Paragraphs(1).Range.End
         On Error GoTo 0
 
-        prefixText = ""
-        If paraStart > 0 And paraStart < selStart Then
-            prefixText = doc.Range(paraStart, selStart).Text
-        End If
-
-        If paraEnd > paraStart And paraEnd - paraStart <= 1200 Then
-            segText = doc.Range(paraStart, paraEnd).Text
-            For Each hp In doc.Hyperlinks
-                title = ZCL_LinkTitle(hp)
-                If Len(title) >= 12 Then
-                    If InStr(1, segText, title, vbTextCompare) > 0 Then
-                        target = ZCL_LinkTarget(hp)
-                        If ZCL_IsCiteName(target) Then
-                            ZCL_BookmarkAtSelection = target
-                            Exit Function
-                        End If
-                    End If
-                End If
-            Next hp
+        If paraEnd > paraStart Then
+            base = paraStart
+            text = doc.Range(paraStart, paraEnd).Text
         End If
     End If
 
-    bestPos = 0
-    bestName = ""
+    If Len(text) = 0 Then Exit Function
 
-    If Len(prefixText) > 0 Then
-        For Each hp In doc.Hyperlinks
-            title = ZCL_LinkTitle(hp)
-            If Len(title) >= 12 Then
-                pos = InStrRev(prefixText, title, -1, vbTextCompare)
-                If pos > bestPos Then
+    flat = ZCL_FlattenText(text)
+    offset = selStart - base + 1
+    If offset < 1 Then offset = 1
+    If offset > Len(flat) Then offset = Len(flat)
+
+    ' 1. A title that lives in the same entry as the cursor
+    For Each hp In doc.Hyperlinks
+        If Len(ZCL_LinkTitle(hp)) >= 12 Then
+            flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
+            pos = InStr(1, flat, flatTitle, vbTextCompare)
+            Do While pos > 0
+                Call ZCL_ChunkBounds(text, pos, cStart, cEnd)
+                If offset >= cStart And offset <= cEnd Then
                     target = ZCL_LinkTarget(hp)
                     If ZCL_IsCiteName(target) Then
-                        bestPos = pos
-                        bestName = target
+                        ZCL_BookmarkAtSelection = target
+                        Exit Function
                     End If
                 End If
+                pos = InStr(pos + 1, flat, flatTitle, vbTextCompare)
+            Loop
+        End If
+    Next hp
+
+    ' 2. Closest entry title before the cursor
+    bestPos = 0
+    bestName = ""
+    For Each hp In doc.Hyperlinks
+        If Len(ZCL_LinkTitle(hp)) >= 12 Then
+            flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
+            pos = InStrRev(flat, flatTitle, offset, vbTextCompare)
+            If pos > bestPos Then
+                target = ZCL_LinkTarget(hp)
+                If ZCL_IsCiteName(target) Then
+                    bestPos = pos
+                    bestName = target
+                End If
             End If
-        Next hp
-    End If
+        End If
+    Next hp
 
     If Len(bestName) > 0 Then
         ZCL_BookmarkAtSelection = bestName
@@ -1628,9 +1707,11 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then
             If bk.Range.Start <= selStart And bk.Range.End >= selEnd Then
-                If bestLen < 0 Or (bk.Range.End - bk.Range.Start) < bestLen Then
-                    bestLen = bk.Range.End - bk.Range.Start
-                    bestName = bk.name
+                If bk.Range.End - bk.Range.Start <= 1200 Then
+                    If bestLen < 0 Or (bk.Range.End - bk.Range.Start) < bestLen Then
+                        bestLen = bk.Range.End - bk.Range.Start
+                        bestName = bk.name
+                    End If
                 End If
             End If
         End If
@@ -1763,7 +1844,8 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     End If
     
     Set bk = doc.Bookmarks(targetName)
-    bkText = bk.Range.Text
+    bkText = ZCL_EntryTextAt(doc, bk.Range.Start)
+    If Len(bkText) < 8 Then bkText = bk.Range.Text
     label = ZCL_ShortText(bkText, 110)
     
     ReDim starts(0 To 0)
@@ -1795,8 +1877,10 @@ Public Sub ZCL_CitedBy(control As IRibbonControl)
     End If
     
     ' A bookmark that covers the whole bibliography gives a useless label
-    If Len(bkText) > 1000 And Len(firstTitle) > 0 Then
-        label = ZCL_ShortText(firstTitle, 110)
+    If Len(firstTitle) > 0 Then
+        If Len(bkText) > 1000 Or Len(label) < 8 Then
+            label = ZCL_ShortText(firstTitle, 110)
+        End If
     End If
     
     prompt = label & vbCrLf & vbCrLf & "Cited " & n & " time"
@@ -1887,7 +1971,8 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
         If ZCL_IsCiteName(bk.name) Then
             bkName = bk.name
             If Not labels.Exists(bkName) Then
-                label = bk.Range.Text
+                label = ZCL_EntryTextAt(doc, bk.Range.Start)
+                If Len(label) < 8 Then label = bk.Range.Text
                 If Len(label) > 1000 Then
                     label = ""
                     If titles.Exists(bkName) Then label = CStr(titles.Item(bkName))
@@ -2149,6 +2234,7 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
     Dim tempBookmarkName As String
     Dim rngBibliography As Range
     Dim rngFound As Range
+    Dim foundStart As Long
     
     ' Data parsing/handling
     Dim yearVal As String
@@ -2376,15 +2462,13 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
                     ' Check if the text was found
                     If rngBibliography.Find.found Then
                         Set rngFound = rngBibliography.Duplicate
+                        foundStart = rngFound.Start
                         rngFound.Expand Unit:=wdParagraph
 
                         ' Zotero's bibliography can collapse into one large
-                        ' paragraph. In that case only bookmark the line that
-                        ' holds the entry, so one entry never covers all of them.
-                        If Len(rngFound.Text) > 1200 Then
-                            Set rngFound = rngBibliography.Duplicate
-                            rngFound.Expand Unit:=wdLine
-                        End If
+                        ' paragraph, so trim the paragraph back to the entry
+                        ' that holds the matched title.
+                        Call ZCL_TrimToEntry(ActiveDocument, rngFound, foundStart)
 
                         If Right(rngFound.Text, 1) = vbCr Then
                             rngFound.End = rngFound.End - 1
