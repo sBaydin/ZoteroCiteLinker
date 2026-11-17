@@ -63,7 +63,7 @@
                   label="Citation Audit" 
                   size="large" 
                   onAction="ZCL_CitationAudit" 
-                  imageMso="TableOfContents" /> 
+                  imageMso="InsertCitation" /> 
           <button id="bCheck" 
                   label="Check Links" 
                   size="large" 
