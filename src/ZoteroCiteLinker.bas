@@ -33,9 +33,15 @@ End Type
 
 Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
-Public Const ZCL_VERSION As String = "2.5.0"
+Public Const ZCL_VERSION As String = "2.6.0"
+
+' Keeps the application event handler alive for the whole Word session,
+' otherwise the class instance is destroyed as soon as it is created.
+Public gZCLApp As ZCLAppEvents
 
 Private Const ZCL_TEMP_PREFIX As String = "ZoteroLinkCitationTempBookmark"
+' Custom document property holding the link fingerprint of the last rebuild.
+Private Const ZCL_SIG_PROP As String = "ZCL_LINK_SIG"
 
 #If Mac Then
     Private Const ZCL_PATH_SEP As String = "/"
@@ -50,6 +56,24 @@ Private p&, token, dic
 
 Public Sub onRibbonLoad(ribbon As IRibbonUI)
     Set myRibbon = ribbon
+    ZCL_InitAppEvents
+End Sub
+
+' Word runs AutoExec when the template is loaded from the STARTUP folder.
+Public Sub AutoExec()
+    ZCL_InitAppEvents
+End Sub
+
+' Hooks the application events that make the links self-healing. Safe to
+' call more than once: only the first call creates the handler.
+Public Sub ZCL_InitAppEvents()
+    If Not gZCLApp Is Nothing Then Exit Sub
+
+    On Error Resume Next
+    Set gZCLApp = New ZCLAppEvents
+    Set gZCLApp.App = Application
+    Err.Clear
+    On Error GoTo 0
 End Sub
 
 ' Returns a Dictionary-compatible object. macOS has no Scripting.Dictionary,
@@ -1279,6 +1303,7 @@ Private Sub ZCL_EndLinkRun()
     Application.StatusBar = False
     Application.ScreenUpdating = True
     Application.EnableCancelKey = wdCancelDisabled
+    gZCLBusy = False
     
     On Error Resume Next
     If ActiveDocument Is Nothing Then Exit Sub
@@ -1301,6 +1326,10 @@ Public Sub ZCL_CheckLinks(control As IRibbonControl)
     Dim msg As String
     
     Set doc = ActiveDocument
+    
+    ' Make sure the self-healing hook is alive, even if Word skipped the
+    ' startup callbacks.
+    ZCL_InitAppEvents
     
     ' 1. Citation fields, and how many of them carry a hyperlink
     For Each aField In doc.Fields
@@ -1355,6 +1384,7 @@ Public Sub ZCL_CheckLinks(control As IRibbonControl)
     End If
     
     If unlinked = 0 And broken = 0 Then
+        ZCL_StoreSignature doc
         MsgBox msg & vbCrLf & vbCrLf & "All citations are linked.", _
                vbInformation, "Link Check"
         Exit Sub
@@ -1362,8 +1392,251 @@ Public Sub ZCL_CheckLinks(control As IRibbonControl)
     
     If MsgBox(msg & vbCrLf & vbCrLf & "Run Link All now to rebuild the links?", _
               vbYesNo + vbQuestion, "Link Check") = vbYes Then
-        ZCL_LinkCitationAll Nothing
+        ZCL_RepairLinks doc
     End If
+End Sub
+
+'-------------------------------------------------------------------
+' SELF-HEALING LINKS
+'-------------------------------------------------------------------
+
+' A deliberately cheap fingerprint of the document's link state. It is
+' built from counts Word already keeps plus a character sum of the
+' bookmark names, so comparing it costs a few milliseconds even in a
+' large document. Any difference means the bibliography or the citations
+' moved on without the links being rebuilt.
+Private Function ZCL_LinkSignature(doc As Document) As String
+    Dim bk As Bookmark
+    Dim aField As field
+    Dim citFields As Long
+    Dim citeBks As Long
+    Dim nameLen As Long
+    Dim nameSum As Double
+    Dim s As String
+    Dim j As Long
+    
+    On Error Resume Next
+    
+    For Each aField In doc.Fields
+        If aField.Type = wdFieldAddin Then
+            If InStr(aField.code, "ADDIN ZOTERO_ITEM") > 0 Then citFields = citFields + 1
+        End If
+    Next aField
+    
+    For Each bk In doc.Bookmarks
+        s = bk.name
+        If ZCL_IsCiteName(s) Then
+            citeBks = citeBks + 1
+            nameLen = nameLen + Len(s)
+            For j = 1 To Len(s)
+                nameSum = nameSum + Asc(Mid$(s, j, 1)) * (j Mod 97 + 1)
+            Next j
+        End If
+    Next bk
+    
+    On Error GoTo 0
+    
+    ZCL_LinkSignature = citFields & "|" & citeBks & "|" & nameLen & "|" & Format$(nameSum, "0")
+End Function
+
+' Reads the fingerprint saved the last time the links were rebuilt.
+Private Function ZCL_StoredSignature(doc As Document) As String
+    Dim v As String
+    
+    On Error Resume Next
+    ' Documents this add-in never linked have no properties to look at.
+    If doc.CustomDocumentProperties.Count > 0 Then
+        v = CStr(doc.CustomDocumentProperties(ZCL_SIG_PROP).Value)
+    End If
+    If Err.Number <> 0 Then
+        v = ""
+    End If
+    Err.Clear
+    On Error GoTo 0
+    
+    ZCL_StoredSignature = v
+End Function
+
+' Remembers the state we just produced, so the next open can tell whether
+' the links still match the document.
+Private Sub ZCL_StoreSignature(doc As Document)
+    Dim v As String
+    Dim p As Object
+    
+    On Error Resume Next
+    v = ZCL_LinkSignature(doc)
+    Set p = doc.CustomDocumentProperties(ZCL_SIG_PROP)
+    If p Is Nothing Then
+        doc.CustomDocumentProperties.Add Name:=ZCL_SIG_PROP, LinkToContent:=False, _
+                                         Value:=v, Type:=4
+    Else
+        p.Value = v
+    End If
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+' Forgets the fingerprint, so a document the user unlinked on purpose is
+' not reported as out of date later.
+Private Sub ZCL_ForgetSignature(doc As Document)
+    On Error Resume Next
+    doc.CustomDocumentProperties(ZCL_SIG_PROP).Delete
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+' Documents that already had their one repair offer in this Word session.
+Private gZCLPrompted As Collection
+' Set while the links are being rebuilt, to ignore our own events.
+Private gZCLBusy As Boolean
+
+Private Function ZCL_DocKey(doc As Document) As String
+    On Error Resume Next
+    ZCL_DocKey = doc.FullName
+    If Len(ZCL_DocKey) = 0 Then ZCL_DocKey = doc.name
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+Private Function ZCL_AlreadyPrompted(ByVal key As String) As Boolean
+    If gZCLPrompted Is Nothing Then Exit Function
+    On Error Resume Next
+    ZCL_AlreadyPrompted = (gZCLPrompted(key) = 1)
+    Err.Clear
+    On Error GoTo 0
+End Function
+
+Private Sub ZCL_MarkPrompted(ByVal key As String)
+    If gZCLPrompted Is Nothing Then Set gZCLPrompted = New Collection
+    On Error Resume Next
+    gZCLPrompted.Add 1, key
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+' Counts citation links whose target bookmark no longer exists.
+Private Function ZCL_CountBrokenLinks(doc As Document) As Long
+    Dim hp As Hyperlink
+    Dim target As String
+    Dim n As Long
+    
+    On Error Resume Next
+    For Each hp In doc.Hyperlinks
+        target = ZCL_LinkTarget(hp)
+        If ZCL_IsCiteName(target) Then
+            If Not doc.Bookmarks.Exists(target) Then n = n + 1
+        End If
+    Next hp
+    On Error GoTo 0
+    
+    ZCL_CountBrokenLinks = n
+End Function
+
+' Called by the application events class when a document opens or a window
+' is activated. It never scans the body text: it compares the cheap
+' fingerprint only, and always asks before touching anything.
+Public Sub ZCL_OnDocumentEvent(ByVal doc As Document, ByVal canPrompt As Boolean)
+    Dim stored As String
+    Dim current As String
+    Dim broken As Long
+    Dim key As String
+    Dim answer As VbMsgBoxResult
+    Dim msg As String
+    
+    If gZCLBusy Then Exit Sub
+    If doc Is Nothing Then Exit Sub
+
+    ' A read-only document cannot be repaired here, so do not offer it.
+    On Error Resume Next
+    If doc.ReadOnly Then
+        Err.Clear
+        On Error GoTo 0
+        Exit Sub
+    End If
+    Err.Clear
+    On Error GoTo 0
+
+    stored = ZCL_StoredSignature(doc)
+    If Len(stored) = 0 Then Exit Sub
+    
+    current = ZCL_LinkSignature(doc)
+    If current = stored Then
+        ' Links match the document again: drop any hint left at open time.
+        On Error Resume Next
+        Application.StatusBar = False
+        Err.Clear
+        On Error GoTo 0
+        Exit Sub
+    End If
+    
+    key = ZCL_DocKey(doc)
+    If ZCL_AlreadyPrompted(key) Then Exit Sub
+    
+    ' At open time the window is not ready yet: leave a quiet hint and let
+    ' the following WindowActivate do the asking.
+    If Not canPrompt Then
+        Application.StatusBar = "ZoteroCiteLinker: citation links may be out of date. " & _
+                                "Check Links repairs them."
+        Exit Sub
+    End If
+    
+    ZCL_MarkPrompted key
+    
+    broken = ZCL_CountBrokenLinks(doc)
+    
+    If broken > 0 Then
+        msg = broken & " citation link(s) no longer point to a bibliography entry."
+    Else
+        msg = "The bibliography or the citations changed since the links were last built."
+    End If
+    
+    answer = MsgBox("ZoteroCiteLinker" & vbCrLf & vbCrLf & msg & vbCrLf & vbCrLf & _
+                    "Rebuild all citation links now?", _
+                    vbYesNo + vbQuestion, "Citation links out of date")
+    
+    Application.StatusBar = False
+    
+    If answer = vbYes Then ZCL_RepairLinks doc
+End Sub
+
+' Rebuilds every citation link in place and records the new fingerprint.
+' Zotero does not have to be running: the citation data lives in the fields.
+Private Sub ZCL_RepairLinks(doc As Document)
+    Dim prevScreen As Boolean
+    
+    On Error GoTo Failed
+    
+    If doc.ReadOnly Then
+        MsgBox "This document is read-only, so its links cannot be rebuilt here.", _
+               vbInformation, "ZoteroCiteLinker"
+        Exit Sub
+    End If
+    
+    If Not doc Is ActiveDocument Then
+        doc.Activate
+        If Not doc Is ActiveDocument Then
+            MsgBox "Activate the document and use Check Links to rebuild the links.", _
+                   vbInformation, "ZoteroCiteLinker"
+            Exit Sub
+        End If
+    End If
+    
+    gZCLBusy = True
+    prevScreen = Application.ScreenUpdating
+    Application.ScreenUpdating = False
+    
+    Call FuncZoteroUnlinkCitations
+    Call ZoteroLinkCitation(doc.Fields, False, False)
+
+    Application.ScreenUpdating = prevScreen
+    gZCLBusy = False
+    Exit Sub
+    
+Failed:
+    gZCLBusy = False
+    Application.ScreenUpdating = True
+    MsgBox "The links could not be rebuilt automatically." & vbCrLf & vbCrLf & _
+           "Use Check Links to see the details.", vbExclamation, "ZoteroCiteLinker"
 End Sub
 
 '-------------------------------------------------------------------
@@ -2369,6 +2642,10 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
     Dim errDesc As String
 
     '--- Initializations ---
+    ' Mutes the self-healing events while the links are rewritten; every exit
+    ' path either clears the flag or goes through the cleanup handler.
+    gZCLBusy = True
+    On Error GoTo ZCL_LinkAborted
     Set prefs = GetZoteroPrefs()
     Set bibField = Nothing
     iCount = 0
@@ -2379,12 +2656,14 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
             "Click on Document Preferences in Word, then expand the Advanced Options section. " & _
             "This will allow you to verify whether the 'Store citation as bookmarks' option was accidentally enabled.", _
             vbCritical, "Error"
+        gZCLBusy = False
         Exit Sub
     End If
 
     styleId = prefs.Item("style-id")
     If Not isSupportedStyle(styleId) Then
         MsgBox "The current citation style is not yet supported: " & styleId, vbCritical, "Error"
+        gZCLBusy = False
         Exit Sub
     End If
 
@@ -2432,7 +2711,6 @@ Private Sub ZoteroLinkCitation(targetFields, Optional debugging As Boolean = Fal
     totalFields = ZCL_CountCitationFields(targetFields)
     processed = 0
     Application.EnableCancelKey = wdCancelInterrupt
-    On Error GoTo ZCL_LinkAborted
 
     ' Iterate through all fields in the document
     For Each aField In targetFields
@@ -2631,6 +2909,10 @@ SkipToNextField: ' Label for skipping a field (e.g., in debug mode or for empty 
 
 ExitTheMacro:
 
+    ' Remember the state we actually produced (even after a user stop), so the
+    ' self-healing check does not keep asking about the same document.
+    ZCL_StoreSignature ActiveDocument
+
     ZCL_EndLinkRun
 
     If notify Then MsgBox "Linked " & iCount & " Zotero citations.", vbInformation, "Finish"
@@ -2770,6 +3052,9 @@ Private Sub FuncZoteroUnlinkCitations()
         End If
         On Error GoTo 0
     Next bk
+    
+    ' 3. The links are gone on purpose, so do not report them as broken.
+    ZCL_ForgetSignature doc
     
     Application.ScreenUpdating = True
 End Sub

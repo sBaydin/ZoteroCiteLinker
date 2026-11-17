@@ -16,6 +16,7 @@ This add-in scans your document for Zotero-generated citation fields (e.g., `[1]
 * **Cited By:** Put the cursor in a bibliography entry and see every citation that points to it, with page numbers.
 * **Citation Audit:** Export an HTML report of every reference, how often it is cited and which references are never used.
 * **Link Check:** Verify that the citation links in the document still reach their bibliography entries.
+* **Self-Healing Links:** The links remember the document they belong to. When Zotero rebuilds the bibliography, the add-in notices the change and offers a one-click repair.
 * **Customization:** Change the color of all Zotero citations or apply a custom Word "Character Style" for advanced formatting.
 * **Compatibility:** Works with over 20 common Zotero citation styles (listed in the "How to Use" section below).
 * **Cross-Platform:** One `.dotm` runs on Word for Windows and Word for macOS.
@@ -142,7 +143,7 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
     * It reads the links that **Link All** created, so run Link All first if the bibliography has no links yet. Nothing is written into the document.
 
 * **Citation Audit (`ZCL_CitationAudit`)**
-    * Produces a single self-contained HTML report about the citation structure of the document. The report is headed **ZOTEROCITELINKER 2.5.0 AUDIT REPORT** with the document name, folder, date and page count underneath.
+    * Produces a single self-contained HTML report about the citation structure of the document. The report is headed **ZOTEROCITELINKER 2.6.0 AUDIT REPORT** with the document name, folder, date and page count underneath.
     * Contents:
         * a summary (references, citation links, uncited references, citation fields, fields without a link, links to a missing entry),
         * the list of **references that are never cited**, which is the fastest way to find a source you forgot to use,
@@ -153,10 +154,25 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **Check Links (`ZCL_CheckLinks`)**
     * Scans the document and reports how many Zotero citation fields exist, how many of them carry a link, how many are not linked, and how many links point to a bibliography bookmark that no longer exists.
-    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to run **Link All** again to repair them.
+    * Broken targets usually appear after Zotero rebuilds the bibliography and a title or year changes. The dialog lists the first few and offers to rebuild the links in place.
     * It also removes any leftover temporary bookmarks from an interrupted linking run.
 
+### Self-Healing Links
+
+Every time a document is linked, the add-in stores a small fingerprint in the document itself: how many Zotero citation fields it has, how many citation bookmarks, and a checksum of the bookmark names. Nothing else is stored, and the document looks exactly the same in Zotero and in Word.
+
+When the document is opened (or Word switches back to its window), that fingerprint is compared with the live document:
+
+* **No full scan at open.** The comparison reads two counters and the names of the bookmarks this add-in created, so it costs milliseconds even in a 500-page document.
+* **Nothing happens on a normal open.** A document that was never linked by this add-in is skipped immediately.
+* **A mismatch produces one question per document per Word session:** *"Citation links out of date — rebuild all citation links now?"* Answer **Yes** and the links are rebuilt in place; answer **No** and you are not asked again for that document until Word is restarted.
+* **Repairing does not need Zotero**, because the citation data lives in the citation fields themselves.
+* **Unlinking resets it.** A document you unlinked on purpose is not reported as broken.
+
+The same check is what makes **Check Links** useful later: it still lists the details, and its repair offer now uses the same rebuild path.
+
 ### Formatting & Help
+
 
 * **Change Color (`ZCL_ChangeColor`)**
     * Opens a simple menu asking you to pick a color by number (Blue, Red, Auto/Black, etc.). This will apply your chosen color to all Zotero citation fields in the document.
