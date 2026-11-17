@@ -1591,12 +1591,14 @@ End Sub
 
 ' Returns the Cite_ bookmark of the bibliography entry under the cursor.
 ' Zotero stores the bibliography as one field, so entries are located from
-' the break-delimited chunk that holds the cursor. Strategies, most precise
-' first:
-'   1. the citation bookmark that starts inside that chunk,
-'   2. a citation title that appears inside that chunk,
-'   3. the closest title before the cursor,
-'   4. the smallest citation bookmark that contains the selection.
+' the break-delimited chunk that holds the cursor, then from the citation
+' titles. Strategies, most precise first:
+'   1. the entry-sized citation bookmark that contains the cursor,
+'   2. a citation title that appears inside the same chunk as the cursor,
+'   3. the closest title by distance, when nothing delimits the entries,
+'   4. the closest title before the cursor,
+'   5. a bookmark that starts inside the cursor's chunk,
+'   6. the smallest citation bookmark that contains the selection.
 Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim bk As Bookmark
     Dim hp As Hyperlink
@@ -1609,19 +1611,19 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     Dim bestName As String
     Dim bestPos As Long
     Dim bestLen As Long
+    Dim bestStart As Long
     Dim selStart As Long
     Dim selEnd As Long
     Dim base As Long
     Dim offset As Long
     Dim pos As Long
+    Dim dist As Long
     Dim cStart As Long
     Dim cEnd As Long
-    Dim paraStart As Long
-    Dim paraEnd As Long
     Dim docStart As Long
     Dim docEnd As Long
-    Dim bestStart As Long
-    Dim dist As Long
+    Dim paraStart As Long
+    Dim paraEnd As Long
 
     selStart = Selection.Start
     selEnd = Selection.End
@@ -1671,17 +1673,23 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     docStart = base + cStart - 1
     docEnd = base + cEnd - 1
 
-    ' 1. The citation bookmark that starts inside the entry under the
-    ' cursor. This does not depend on the title text at all.
-    bestStart = -1
+    ' 1. The entry-sized citation bookmark that contains the cursor. This
+    '    does not depend on the title text, and it still works when one
+    '    chunk holds several entries.
     bestName = ""
+    bestLen = -1
+    bestStart = -1
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then
-            If bk.Range.Start >= docStart And bk.Range.Start <= docEnd Then
-                dist = Abs(bk.Range.Start - selStart)
-                If bestStart < 0 Or dist < bestStart Then
-                    bestStart = dist
-                    bestName = bk.name
+            If bk.Range.Start <= selEnd And bk.Range.End >= selStart Then
+                dist = bk.Range.End - bk.Range.Start
+                If dist <= 1200 Then
+                    If bestLen < 0 Or dist < bestLen _
+                       Or (dist = bestLen And Abs(bk.Range.Start - selStart) < bestStart) Then
+                        bestLen = dist
+                        bestStart = Abs(bk.Range.Start - selStart)
+                        bestName = bk.name
+                    End If
                 End If
             End If
         End If
@@ -1693,25 +1701,55 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
     End If
 
     ' 2. A title that lives in the same entry as the cursor
-    For Each hp In doc.Hyperlinks
-        If Len(ZCL_LinkTitle(hp)) >= 12 Then
-            flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
-            pos = InStr(1, flat, flatTitle, vbTextCompare)
-            Do While pos > 0
-                Call ZCL_ChunkBounds(text, pos, cStart, cEnd)
-                If offset >= cStart And offset <= cEnd Then
+    If docEnd - docStart <= 1200 Then
+        For Each hp In doc.Hyperlinks
+            If Len(ZCL_LinkTitle(hp)) >= 12 Then
+                flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
+                pos = InStr(1, flat, flatTitle, vbTextCompare)
+                Do While pos > 0
+                    Call ZCL_ChunkBounds(text, pos, cStart, cEnd)
+                    If offset >= cStart And offset <= cEnd Then
+                        target = ZCL_LinkTarget(hp)
+                        If ZCL_IsCiteName(target) Then
+                            ZCL_BookmarkAtSelection = target
+                            Exit Function
+                        End If
+                    End If
+                    pos = InStr(pos + 1, flat, flatTitle, vbTextCompare)
+                Loop
+            End If
+        Next hp
+    End If
+
+    ' 3. Nothing delimits the entries: the closest title by distance
+    If docEnd - docStart > 1200 Then
+        bestName = ""
+        bestStart = -1
+        For Each hp In doc.Hyperlinks
+            If Len(ZCL_LinkTitle(hp)) >= 12 Then
+                flatTitle = ZCL_FlattenText(ZCL_LinkTitle(hp))
+                pos = InStr(1, flat, flatTitle, vbTextCompare)
+                Do While pos > 0
                     target = ZCL_LinkTarget(hp)
                     If ZCL_IsCiteName(target) Then
-                        ZCL_BookmarkAtSelection = target
-                        Exit Function
+                        dist = Abs(pos - offset)
+                        If bestStart < 0 Or dist < bestStart Then
+                            bestStart = dist
+                            bestName = target
+                        End If
                     End If
-                End If
-                pos = InStr(pos + 1, flat, flatTitle, vbTextCompare)
-            Loop
-        End If
-    Next hp
+                    pos = InStr(pos + 1, flat, flatTitle, vbTextCompare)
+                Loop
+            End If
+        Next hp
 
-    ' 3. Closest entry title before the cursor
+        If Len(bestName) > 0 Then
+            ZCL_BookmarkAtSelection = bestName
+            Exit Function
+        End If
+    End If
+
+    ' 4. Closest entry title before the cursor
     bestPos = 0
     bestName = ""
     For Each hp In doc.Hyperlinks
@@ -1733,7 +1771,30 @@ Private Function ZCL_BookmarkAtSelection(doc As Document) As String
         Exit Function
     End If
 
-    ' 4. Smallest bookmark that contains the selection
+    ' 5. A bookmark that starts inside the cursor's chunk but does not
+    '    contain the cursor, used when the entries are not delimited
+    bestStart = -1
+    bestName = ""
+    For Each bk In doc.Bookmarks
+        If ZCL_IsCiteName(bk.name) Then
+            If bk.Range.End - bk.Range.Start <= 1200 Then
+                If bk.Range.Start >= docStart And bk.Range.Start <= docEnd Then
+                    dist = Abs(bk.Range.Start - selStart)
+                    If bestStart < 0 Or dist < bestStart Then
+                        bestStart = dist
+                        bestName = bk.name
+                    End If
+                End If
+            End If
+        End If
+    Next bk
+
+    If Len(bestName) > 0 Then
+        ZCL_BookmarkAtSelection = bestName
+        Exit Function
+    End If
+
+    ' 6. Smallest bookmark that contains the selection
     bestLen = -1
     For Each bk In doc.Bookmarks
         If ZCL_IsCiteName(bk.name) Then
@@ -1978,6 +2039,10 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     Dim errNum As Long
     Dim errDesc As String
     Dim reportTitle As String
+    Dim oddNames As Collection
+    Dim oddLens As Collection
+    Dim oddStarts As Collection
+    Dim nOdd As Long
 
     Set doc = ActiveDocument
     Set labels = CreateDict()
@@ -1985,6 +2050,9 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     Set pagesText = CreateDict()
     Set titles = CreateDict()
     Set names = New Collection
+    Set oddNames = New Collection
+    Set oddLens = New Collection
+    Set oddStarts = New Collection
 
     ' 1. Titles from the citation tooltips, used when a bookmark covers the
     '    whole bibliography instead of a single entry
@@ -2010,6 +2078,12 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
                     If Len(label) = 0 Then label = bkName
                 End If
                 labels.Item(bkName) = ZCL_ShortText(label, 150)
+                If bk.Range.End - bk.Range.Start > 400 Then
+                    nOdd = nOdd + 1
+                    oddNames.Add bkName
+                    oddLens.Add CStr(bk.Range.End - bk.Range.Start)
+                    oddStarts.Add CStr(bk.Range.Start)
+                End If
                 counts.Item(bkName) = 0
                 pagesText.Item(bkName) = ""
                 names.Add bkName
@@ -2173,6 +2247,20 @@ Public Sub ZCL_CitationAudit(control As IRibbonControl)
     html = html & "if(u)u.addEventListener('change',apply);" & vbCrLf
     html = html & "})();" & vbCrLf
     html = html & "</script>" & vbCrLf
+
+    html = html & "<h2>Bookmark diagnostics</h2>" & vbCrLf
+    If nOdd = 0 Then
+        html = html & "<p>Every bookmark covers a single bibliography entry.</p>" & vbCrLf
+    Else
+        html = html & "<p>These bookmarks are longer than a normal entry. If Cited By returns the wrong reference, run Link All again so the boundaries are rebuilt.</p>" & vbCrLf
+        html = html & "<table><tr><th>Reference</th><th class=""num"">Bookmark length</th><th class=""num"">Starts at</th></tr>" & vbCrLf
+        For i = 1 To nOdd
+            html = html & "<tr><td>" & ZCL_HtmlEscape(labels.Item(oddNames(i))) & "</td>"
+            html = html & "<td class=""num"">" & oddLens(i) & "</td>"
+            html = html & "<td class=""num"">" & oddStarts(i) & "</td></tr>" & vbCrLf
+        Next i
+        html = html & "</table>" & vbCrLf
+    End If
 
     html = html & "</body></html>" & vbCrLf
 
