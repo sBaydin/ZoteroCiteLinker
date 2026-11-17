@@ -166,8 +166,14 @@ Here is a breakdown of each button on the "Zotero Linker" tab.
 
 * **About (`ZCL_About`)**
     * Shows the add-in version, the author, the GitHub address and the license.
-    * Choose **Yes** in the follow-up prompt to open the GitHub repository in your browser.
     * The older `ZCL_Information` callback is kept as an alias, so templates built with an earlier Ribbon still open the About dialog.
+
+* **Check for Updates (`ZCL_CheckUpdates`)**
+    * Asks GitHub for the newest published release and compares it with the running version. If a newer release exists, it offers to open the download page.
+    * Word for Windows can query GitHub directly. Word for macOS cannot make HTTP requests from VBA, so there the button offers to open the releases page instead.
+
+* **GitHub (`ZCL_OpenGitHub`)**
+    * Opens the repository page in your default browser.
 
 ## 🤝 Acknowledgments
 

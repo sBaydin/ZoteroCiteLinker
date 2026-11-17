@@ -35,6 +35,10 @@ Public myRibbon As IRibbonUI
 Public gUserTextStyle As String
 Public Const ZCL_VERSION As String = "2.3.0"
 
+Private Const ZCL_REPO_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker"
+Private Const ZCL_RELEASES_URL As String = "https://github.com/sBaydin/ZoteroCiteLinker/releases/latest"
+Private Const ZCL_LATEST_API As String = "https://api.github.com/repos/sBaydin/ZoteroCiteLinker/releases/latest"
+
 Private p&, token, dic
 
 Public Sub onRibbonLoad(ribbon As IRibbonUI)
@@ -1018,7 +1022,7 @@ Private Sub ExtractCitations(field As field, ByRef citations() As Citation, styl
     End Select
 End Sub
 
-' Displays the About dialog, with an optional shortcut to the GitHub page.
+' Displays the About dialog.
 Public Sub ZCL_About(control As IRibbonControl)
     Dim msg As String
     
@@ -1031,13 +1035,6 @@ Public Sub ZCL_About(control As IRibbonControl)
           "License: MIT"
     
     MsgBox msg, vbInformation, "About ZoteroCiteLinker"
-    
-    If MsgBox("Open the GitHub repository in your browser?", _
-              vbYesNo + vbQuestion, "GitHub") = vbYes Then
-        On Error Resume Next
-        ThisDocument.FollowHyperlink "https://github.com/sBaydin/ZoteroCiteLinker"
-        On Error GoTo 0
-    End If
 End Sub
 
 ' Kept for templates whose Ribbon still calls the old About callback.
@@ -1070,6 +1067,155 @@ Public Sub ZCL_SupportedStyles(control As IRibbonControl)
     
     MsgBox msg, vbInformation, "Supported Citation Styles"
 End Sub
+
+'-------------------------------------------------------------------
+' GITHUB & UPDATES
+'-------------------------------------------------------------------
+
+' Opens the GitHub repository in the default browser.
+Public Sub ZCL_OpenGitHub(control As IRibbonControl)
+    ZCL_OpenURL ZCL_REPO_URL
+End Sub
+
+' Compares the installed version with the newest GitHub release.
+Public Sub ZCL_CheckUpdates(control As IRibbonControl)
+    Dim body As String
+    Dim latest As String
+    Dim cmp As Long
+    Dim msg As String
+    
+    body = ZCL_FetchText(ZCL_LATEST_API)
+    
+    If Len(body) = 0 Then
+        msg = "Could not reach GitHub to check the version." & vbCrLf & vbCrLf & _
+              "The automatic check needs Word for Windows and an internet connection." & vbCrLf & vbCrLf & _
+              "Open the releases page in your browser instead?"
+        If MsgBox(msg, vbYesNo + vbQuestion, "Check for Updates") = vbYes Then
+            ZCL_OpenURL ZCL_RELEASES_URL
+        End If
+        Exit Sub
+    End If
+    
+    latest = ZCL_LatestTag(body)
+    
+    If Len(latest) = 0 Then
+        msg = "Could not read the latest version number from GitHub." & vbCrLf & vbCrLf & _
+              "Open the releases page in your browser instead?"
+        If MsgBox(msg, vbYesNo + vbQuestion, "Check for Updates") = vbYes Then
+            ZCL_OpenURL ZCL_RELEASES_URL
+        End If
+        Exit Sub
+    End If
+    
+    cmp = ZCL_CompareVersions(latest, ZCL_VERSION)
+    
+    If cmp > 0 Then
+        msg = "A newer version is available." & vbCrLf & vbCrLf & _
+              "Installed: " & ZCL_VERSION & vbCrLf & _
+              "Latest: " & latest & vbCrLf & vbCrLf & _
+              "Open the download page in your browser?"
+        If MsgBox(msg, vbYesNo + vbQuestion, "Update Available") = vbYes Then
+            ZCL_OpenURL ZCL_RELEASES_URL
+        End If
+    Else
+        MsgBox "You are running the latest version." & vbCrLf & vbCrLf & _
+               "Installed: " & ZCL_VERSION & vbCrLf & _
+               "Latest: " & latest, vbInformation, "No Updates"
+    End If
+End Sub
+
+' Opens a web address in the default browser.
+Private Sub ZCL_OpenURL(ByVal url As String)
+    On Error Resume Next
+    ThisDocument.FollowHyperlink url
+    On Error GoTo 0
+End Sub
+
+' Downloads a URL as plain text. Returns "" when there is no HTTP support,
+' which is the case on macOS, or when the request fails.
+Private Function ZCL_FetchText(ByVal url As String) As String
+    Dim progIds As Variant
+    Dim i As Long
+    Dim http As Object
+    
+    progIds = Array("MSXML2.XMLHTTP.6.0", "MSXML2.XMLHTTP")
+    
+    For i = 0 To UBound(progIds)
+        Set http = Nothing
+        On Error Resume Next
+        Err.Clear
+        Set http = CreateObject(CStr(progIds(i)))
+        If Err.Number = 0 Then
+            Err.Clear
+            http.Open "GET", url, False
+            http.setRequestHeader "User-Agent", "ZoteroCiteLinker"
+            http.Send
+            If Err.Number = 0 Then
+                If http.Status = 200 Then
+                    ZCL_FetchText = http.responseText
+                End If
+            End If
+        End If
+        On Error GoTo 0
+        If Len(ZCL_FetchText) > 0 Then Exit Function
+    Next i
+End Function
+
+' Reads the tag_name value out of a GitHub release JSON response.
+Private Function ZCL_LatestTag(ByVal body As String) As String
+    Const tagKey As String = """tag_name"":"
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim raw As String
+    
+    startPos = InStr(1, body, tagKey, vbTextCompare)
+    If startPos = 0 Then Exit Function
+    startPos = startPos + Len(tagKey)
+    
+    startPos = InStr(startPos, body, """")
+    If startPos = 0 Then Exit Function
+    startPos = startPos + 1
+    
+    endPos = InStr(startPos, body, """")
+    If endPos = 0 Then Exit Function
+    
+    raw = Mid$(body, startPos, endPos - startPos)
+    If Left$(raw, 1) = "v" Or Left$(raw, 1) = "V" Then
+        raw = Mid$(raw, 2)
+    End If
+    ZCL_LatestTag = Trim$(raw)
+End Function
+
+' Compares dotted version numbers: 1 when a is newer, -1 when b is newer, 0 when equal.
+Private Function ZCL_CompareVersions(ByVal a As String, ByVal b As String) As Long
+    Dim aParts As Variant
+    Dim bParts As Variant
+    Dim parts As Long
+    Dim i As Long
+    Dim aNum As Long
+    Dim bNum As Long
+    
+    aParts = Split(a, ".")
+    bParts = Split(b, ".")
+    
+    parts = UBound(aParts)
+    If UBound(bParts) > parts Then parts = UBound(bParts)
+    
+    For i = 0 To parts
+        aNum = 0
+        bNum = 0
+        If i <= UBound(aParts) Then aNum = Val(aParts(i))
+        If i <= UBound(bParts) Then bNum = Val(bParts(i))
+        
+        If aNum > bNum Then
+            ZCL_CompareVersions = 1
+            Exit Function
+        ElseIf aNum < bNum Then
+            ZCL_CompareVersions = -1
+            Exit Function
+        End If
+    Next i
+End Function
 
 '-------------------------------------------------------------------
 ' ZOTERO LINK CITATION

@@ -51,11 +51,24 @@
                   size="large" 
                   onAction="ZCL_SetCitationStyle" 
                   imageMso="StylesModifyStyle" />        
+        </group>
+
+        <group id="gHelp" label="Help &amp; Updates">
           <button id="bStyles" 
                   label="Supported Styles" 
                   size="large" 
                   onAction="ZCL_SupportedStyles" 
                   imageMso="StylesPane" /> 
+          <button id="bUpdates" 
+                  label="Check for Updates" 
+                  size="large" 
+                  onAction="ZCL_CheckUpdates" 
+                  imageMso="RefreshAll" /> 
+          <button id="bGithub" 
+                  label="GitHub" 
+                  size="large" 
+                  onAction="ZCL_OpenGitHub" 
+                  imageMso="HyperlinkInsert" /> 
           <button id="bInfo" 
                   label="About" 
                   size="large" 
