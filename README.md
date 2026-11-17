@@ -60,7 +60,7 @@ The `src/` folder is only needed to inspect or rebuild the add-in. Open the base
 * `src/ZCLAppEvents.cls` — the document events used by the self-healing check,
 * `src/CustomDictionary.cls` — the macOS dictionary replacement.
 
-Then **Debug → Compile VBAProject** and save as a macro-enabled template. The ribbon lives in `src/customUI14.xml`.
+Then **Debug → Compile VBAProject** and save as a macro-enabled template. The **Zotero Linker** tab is already defined inside the template, so only the code files above need importing.
 
 </details>
 
