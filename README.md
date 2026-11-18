@@ -93,9 +93,9 @@ After a successful pass the document stores a small fingerprint of its own link 
 
 ### Analysis
 
-* **Cited By** — put the cursor anywhere inside a bibliography entry and press the button. A dialog shows the reference and lists up to twelve citations pointing to it, each with page number and a short snippet; type a number to jump there. Works with wrapped and multi-line entries, where Zotero keeps the whole bibliography in one field. Nothing is written into the document.
-* **Citation Audit** — builds one self-contained HTML report: a summary, the references that are never cited, and every reference with its citation count and the pages it appears on. The table sorts by column, filters as you type, and has an **Only uncited** switch. It always asks where to save (suggested name `<document>-citation-audit.html`); cancel and nothing is written.
-* **Check Links** — reports how many Zotero fields the document has, how many carry a link, how many do not, and how many links point at a bibliography entry that no longer exists — the usual damage after Zotero rebuilds a bibliography and a title or year changes. It lists the first broken targets, offers to rebuild the links in place, and clears leftover temporary bookmarks from an interrupted run.
+* **Cited By** — put the cursor anywhere inside a bibliography entry and press the button. A dialog shows the reference and lists up to twelve citations pointing to it, each with page number and a short snippet; type a number to jump there.
+* **Citation Audit** — builds one self-contained HTML report: a summary, the references that are never cited, and every reference with its citation count and the pages it appears on. The table sorts by column, filters as you type, and has an **Only uncited** switch.
+* **Check Links** — reports how many Zotero fields the document has, how many carry a link, how many do not, and how many links point at a bibliography entry that no longer exists — the usual damage after Zotero rebuilds a bibliography and a title or year changes.
 
 ### Help & Updates
 
